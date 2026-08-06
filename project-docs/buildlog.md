@@ -27,6 +27,39 @@
 
 ---
 
+## [2026-08-07 01:05] 步骤 2 完成：模块化重构（工具工厂消除重复）
+
+### 执行的任务
+- 将单文件 `server.py`（40+ 复制粘贴工具）拆分为四个模块：
+  - `server.py`：FastMCP 实例、`register_all(mcp)` 注册入口、`main()`
+  - `registry.py`：声明式工具注册表 + 工厂函数，按命名空间列表批量生成工具
+  - `client.py`：PubChemPy 调用封装层（工具不再直接依赖 pubchempy）
+  - `utils.py`：`_safe_execute` 迁移（`safe_execute` / `to_json_safe` 序列化与异常捕获）
+- 工具工厂覆盖全部工具族：化合物搜索、属性、同义词、物质搜索（含 sourceid 特判）、测定、CID/SID/AID 解析、下载。
+
+### 关键变更
+- 新增 `src/pubchem_mcp_server/utils.py`、`client.py`、`registry.py`
+- 重写 `src/pubchem_mcp_server/server.py`（13KB → 精简入口）
+
+### 验证结果
+- MCP 握手 + `tools/list`：工具数量 41，名称与注册顺序和重构前完全一致（`ORDER_MATCH: True`）；
+- 抽查参数 schema 一致：`get_compounds_by_cid`（identifier: integer）、`get_properties_by_cid`（properties: array[string]）、`get_substances_by_sourceid`（sourceid + source_name）、`download_by_cid`（overwrite 可选 bool）；
+- 真实调用冒烟（PubChem REST，网络）：
+  - `get_compounds_by_cid(2244)` 返回阿司匹林完整记录；
+  - `get_cids_by_name("aspirin")` 返回 `[2244]`；
+  - `get_properties_by_cid(["MolecularFormula","MolecularWeight"], 2244)` 返回 C9H8O4 / 180.16；
+  - `get_synonyms_by_cid(2244)` 返回同义词列表（aspirin、ACETYLSALICYLIC ACID 等）。
+
+### 遇到的问题及解决方案
+- 用户执行 `uv venv` 重建了 `.venv`（清空已装包），且 `uv pip install -e .` 因未激活虚拟环境装到了 Anaconda base（`c:\ProgramData\anaconda3`）。已用 `uv sync` 重新填充 `.venv`；后续统一用 `uv run`/`uv sync` 管理环境，不再手动激活。
+- pubchempy 1.0.5 内部使用 `urllib`（无 requests 超时参数，`**kwargs` 会变成 URL 查询参数），已在 `client.py` 用 `socket.setdefaulttimeout(30)` 兜底防挂起。
+- 测试脚本一次性写入多条 JSON-RPC 后立即关闭 stdin，最后一条网络请求的响应会被 EOF 中断，属测试伪信号；改为延迟关闭 stdin 后验证通过。
+
+### 下一步计划
+- 步骤 3：工具语义化命名（`pubchem_{动作}_{实体}_by_{标识符}`），删除旧名不留别名。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务
