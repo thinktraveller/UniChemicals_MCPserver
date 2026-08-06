@@ -60,6 +60,41 @@
 
 ---
 
+## [2026-08-07 01:15] 步骤 3 完成：工具语义化命名
+
+### 执行的任务
+- 按 `{数据库}_{动作}_{实体}_by_{标识符}` 规范重写 `registry.py` 中全部工具的注册名与函数名，动作词表固定为 `search`（查记录）/ `get`（取属性/同义词）/ `resolve`（标识符转换）。
+- 新旧命名映射：
+  - `get_compounds_by_*` → `pubchem_search_compound_by_*`（7 个）
+  - `get_substances_by_sid/name/sourceid` → `pubchem_search_substance_by_*`（3 个）
+  - `get_assays_by_aid` → `pubchem_search_assay_by_aid`（1 个）
+  - `get_properties_by_*` → `pubchem_get_property_by_*`（7 个）
+  - `get_synonyms_by_*` → `pubchem_get_synonym_by_*`（7 个）
+  - `get_cids_by_*` → `pubchem_resolve_cid_by_*`（5 个）
+  - `get_sids_by_*` → `pubchem_resolve_sid_by_*`（2 个）
+  - `get_aids_by_*` → `pubchem_resolve_aid_by_*`（2 个）
+- 全部工具 docstring 重写，注明参数含义与返回值；不保留旧名别名。
+
+### 关键变更
+- `src/pubchem_mcp_server/registry.py`：工具名与 docstring 全面更新（工厂与注册表结构不变）
+
+### 验证结果
+- `tools/list`：总计 41 个工具；34 个 `pubchem_*` 前缀语义化名称 + 7 个 `download_by_*`（步骤 4 将移除）；旧名（`get_compounds_by_*` 等）零残留；
+- 工具描述正常展示（含参数说明与返回说明）；
+- 真实调用冒烟（PubChem REST，网络）：
+  - `pubchem_search_compound_by_cid(2244)` 返回阿司匹林记录；
+  - `pubchem_resolve_cid_by_name("aspirin")` 返回 `[2244]`；
+  - `pubchem_get_synonym_by_cid(2244)` 返回同义词列表。
+
+### 遇到的问题及解决方案
+- 计划书步骤 3 的验证标准写的是「工具列表全部符合 pubchem_* 前缀规范」，但下载工具不在动作词表（search/get/resolve）内且步骤 4 将整体移除。为避免无谓的临时改名，7 个 `download_by_*` 保持原名，在步骤 4 直接删除；已与计划书映射表（未包含 download 行）保持一致。
+- 测试脚本并发发送多条 tools/call 后关闭 stdin，最后一条网络响应被 EOF 截断（测试伪信号）；改为逐条发送并等待响应后验证通过。
+
+### 下一步计划
+- 步骤 4：移除 6 个 `download_by_*` 下载工具（实际为 7 个：cid/name/smiles/sdf/inchi/inchikey/formula），同步 README/README_zh、许可证元数据说明，版本号升至 0.2.0。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务

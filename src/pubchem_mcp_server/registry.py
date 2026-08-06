@@ -1,8 +1,14 @@
 """Tool registry: declarative specs and factories that generate MCP tools.
 
-Each family of tools (search / properties / synonyms / identifier conversion /
-download) is driven by a small namespace list, so adding a new identifier
-namespace is a one-line change.
+Tool names follow the convention ``{database}_{action}_{entity}_by_{identifier}``,
+e.g. ``pubchem_search_compound_by_cid``. Actions:
+
+- ``search``: find records (compound / substance / assay)
+- ``get``: retrieve attributes (properties / synonyms)
+- ``resolve``: convert identifiers (CID / SID / AID)
+
+The legacy ``download_by_*`` tools are still registered here only until
+step 4 removes them. Adding a new identifier namespace is a one-line change.
 """
 
 from typing import Any, Callable, List, Optional
@@ -16,7 +22,7 @@ INT_NAMESPACES = {"cid", "sid", "aid"}
 # Namespaces usable for standardized compound records.
 COMPOUND_NAMESPACES = ["cid", "name", "smiles", "sdf", "inchi", "inchikey", "formula"]
 
-# Namespaces for identifier conversion tools.
+# Namespaces for identifier resolution tools.
 CID_NAMESPACES = ["name", "smiles", "inchi", "inchikey", "formula"]
 SID_NAMESPACES = ["cid", "name"]
 AID_NAMESPACES = ["cid", "name"]
@@ -31,114 +37,165 @@ def _id_type(namespace: str) -> type:
 
 def _make_compound_search(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Search PubChem standardized compound records by {namespace}.\n\n"
+        f"- identifier: the {namespace} value (int for cid, str for others)\n"
+        "- searchtype: optional advanced search type "
+        "(substructure / superstructure / similarity)\n\n"
+        "Returns a JSON string of matching records, or Error: <message>."
+    )
 
     def tool(identifier: id_type, searchtype: Optional[str] = None) -> str:
-        """Search for standardized compound records by identifier namespace."""
         return safe_execute(client.get_compounds, identifier, namespace, searchtype=searchtype)
 
-    tool.__name__ = f"get_compounds_by_{namespace}"
-    tool.__doc__ = f"Search for standardized compound records by {namespace}."
+    tool.__name__ = f"pubchem_search_compound_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_property_tool(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Get PubChem compound properties identified by {namespace}.\n\n"
+        f"- properties: list of property names, e.g. MolecularFormula, MolecularWeight, "
+        "InChI, CanonicalSMILES, IsomericSMILES, XLogP\n"
+        f"- identifier: the {namespace} value (int for cid, str for others)\n"
+        "- searchtype: optional advanced search type "
+        "(substructure / superstructure / similarity)\n\n"
+        "Returns a JSON string of the requested properties, or Error: <message>."
+    )
 
     def tool(properties: List[str], identifier: id_type, searchtype: Optional[str] = None) -> str:
-        """Retrieve specific properties for compounds identified by identifier namespace."""
         return safe_execute(client.get_properties, properties, identifier, namespace, searchtype=searchtype)
 
-    tool.__name__ = f"get_properties_by_{namespace}"
-    tool.__doc__ = (
-        f"Retrieve specific properties for compounds identified by {namespace}.\n"
-        "Properties can be: MolecularFormula, MolecularWeight, InChI, "
-        "CanonicalSMILES, IsomericSMILES, XLogP, etc."
-    )
+    tool.__name__ = f"pubchem_get_property_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_synonym_tool(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Get PubChem compound synonyms (alternative names) identified by {namespace}.\n\n"
+        f"- identifier: the {namespace} value (int for cid, str for others)\n\n"
+        "Returns a JSON string of synonyms, or Error: <message>."
+    )
 
     def tool(identifier: id_type) -> str:
-        """Retrieve synonyms (alternative names) for compounds identified by identifier namespace."""
         return safe_execute(client.get_synonyms, identifier, namespace)
 
-    tool.__name__ = f"get_synonyms_by_{namespace}"
-    tool.__doc__ = f"Retrieve synonyms (alternative names) for compounds identified by {namespace}."
+    tool.__name__ = f"pubchem_get_synonym_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_substance_search(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Search PubChem raw substance records by {namespace}.\n\n"
+        f"- identifier: the {namespace} value (int for sid, str otherwise)\n\n"
+        "Returns a JSON string of matching substance records, or Error: <message>."
+    )
 
     def tool(identifier: id_type) -> str:
-        """Search for raw substance records by identifier namespace."""
         return safe_execute(client.get_substances, identifier, namespace)
 
-    tool.__name__ = f"get_substances_by_{namespace}"
-    tool.__doc__ = f"Search for raw substance records by {namespace}."
+    tool.__name__ = f"pubchem_search_substance_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_substance_search_by_sourceid() -> Callable[..., str]:
+    doc = (
+        "Search PubChem raw substance records by source id and source name.\n\n"
+        "- sourceid: the identifier assigned by the source\n"
+        "- source_name: the name of the depositing source\n\n"
+        "Returns a JSON string of matching substance records, or Error: <message>."
+    )
+
     def tool(sourceid: str, source_name: str) -> str:
-        """Search for raw substance records by sourceid and source name."""
         return safe_execute(client.get_substances, sourceid, f"sourceid/{source_name}")
 
-    tool.__name__ = "get_substances_by_sourceid"
-    tool.__doc__ = "Search for raw substance records by sourceid and source name."
+    tool.__name__ = "pubchem_search_substance_by_sourceid"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_assay_search() -> Callable[..., str]:
+    doc = (
+        "Search PubChem bioassay records by aid.\n\n"
+        "- aid: the bioassay identifier (integer)\n\n"
+        "Returns a JSON string of the matching assay record, or Error: <message>."
+    )
+
     def tool(aid: int) -> str:
-        """Search for bioassay records by aid."""
         return safe_execute(client.get_assays, aid, "aid")
 
-    tool.__name__ = "get_assays_by_aid"
-    tool.__doc__ = "Search for bioassay records by aid."
+    tool.__name__ = "pubchem_search_assay_by_aid"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_cid_resolver(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Resolve PubChem compound IDs (CIDs) from {namespace}.\n\n"
+        f"- identifier: the {namespace} value (str)\n"
+        "- searchtype: optional advanced search type "
+        "(substructure / superstructure / similarity)\n\n"
+        "Returns a JSON string of matching CIDs, or Error: <message>."
+    )
 
     def tool(identifier: id_type, searchtype: Optional[str] = None) -> str:
-        """Retrieve Compound Identifiers (CIDs) for the specified query by identifier namespace."""
         return safe_execute(client.get_cids, identifier, namespace, searchtype=searchtype)
 
-    tool.__name__ = f"get_cids_by_{namespace}"
-    tool.__doc__ = f"Retrieve Compound Identifiers (CIDs) for the specified query by {namespace}."
+    tool.__name__ = f"pubchem_resolve_cid_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_sid_resolver(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Resolve PubChem substance IDs (SIDs) from {namespace}.\n\n"
+        f"- identifier: the {namespace} value (int for cid, str for name)\n\n"
+        "Returns a JSON string of matching SIDs, or Error: <message>."
+    )
 
     def tool(identifier: id_type) -> str:
-        """Retrieve Substance Identifiers (SIDs) for the specified query by identifier namespace."""
         return safe_execute(client.get_sids, identifier, namespace)
 
-    tool.__name__ = f"get_sids_by_{namespace}"
-    tool.__doc__ = f"Retrieve Substance Identifiers (SIDs) for the specified query by {namespace}."
+    tool.__name__ = f"pubchem_resolve_sid_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_aid_resolver(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Resolve PubChem assay IDs (AIDs) from {namespace}.\n\n"
+        f"- identifier: the {namespace} value (int for cid, str for name)\n\n"
+        "Returns a JSON string of matching AIDs, or Error: <message>."
+    )
 
     def tool(identifier: id_type) -> str:
-        """Retrieve Assay Identifiers (AIDs) for the specified query by identifier namespace."""
         return safe_execute(client.get_aids, identifier, namespace)
 
-    tool.__name__ = f"get_aids_by_{namespace}"
-    tool.__doc__ = f"Retrieve Assay Identifiers (AIDs) for the specified query by {namespace}."
+    tool.__name__ = f"pubchem_resolve_aid_by_{namespace}"
+    tool.__doc__ = doc
     return tool
 
 
 def _make_download(namespace: str) -> Callable[..., str]:
     id_type = _id_type(namespace)
+    doc = (
+        f"Download compound records identified by {namespace} and save to a file.\n\n"
+        f"- identifier: the {namespace} value (int for cid, str for others)\n"
+        "- outformat: XML, JSON, SDF, CSV, PNG or TXT\n"
+        "- path: absolute path where the file should be saved\n"
+        "- overwrite: whether to overwrite an existing file (default false)\n\n"
+        "Returns a confirmation string, or Error: <message>."
+    )
 
     def tool(
         identifier: id_type,
@@ -146,7 +203,6 @@ def _make_download(namespace: str) -> Callable[..., str]:
         path: str,
         overwrite: Optional[bool] = False,
     ) -> str:
-        """Download compound records identified by identifier namespace and save to a file."""
         try:
             client.download(outformat, path, identifier, namespace, overwrite=overwrite)
             return f"Successfully downloaded to {path}"
@@ -154,30 +210,27 @@ def _make_download(namespace: str) -> Callable[..., str]:
             return f"Error: {str(exc)}"
 
     tool.__name__ = f"download_by_{namespace}"
-    tool.__doc__ = (
-        f"Download compound records identified by {namespace} and save to a file.\n"
-        "outformat can be: XML, JSON, SDF, CSV, PNG, TXT."
-    )
+    tool.__doc__ = doc
     return tool
 
 
 def register_all(mcp: Any) -> None:
     """Register every MCP tool on the given FastMCP instance."""
     for namespace in COMPOUND_NAMESPACES:
-        mcp.tool(name=f"get_compounds_by_{namespace}")(_make_compound_search(namespace))
+        mcp.tool(name=f"pubchem_search_compound_by_{namespace}")(_make_compound_search(namespace))
     for namespace in SUBSTANCE_NAMESPACES:
-        mcp.tool(name=f"get_substances_by_{namespace}")(_make_substance_search(namespace))
-    mcp.tool(name="get_substances_by_sourceid")(_make_substance_search_by_sourceid())
-    mcp.tool(name="get_assays_by_aid")(_make_assay_search())
+        mcp.tool(name=f"pubchem_search_substance_by_{namespace}")(_make_substance_search(namespace))
+    mcp.tool(name="pubchem_search_substance_by_sourceid")(_make_substance_search_by_sourceid())
+    mcp.tool(name="pubchem_search_assay_by_aid")(_make_assay_search())
     for namespace in COMPOUND_NAMESPACES:
-        mcp.tool(name=f"get_properties_by_{namespace}")(_make_property_tool(namespace))
+        mcp.tool(name=f"pubchem_get_property_by_{namespace}")(_make_property_tool(namespace))
     for namespace in COMPOUND_NAMESPACES:
-        mcp.tool(name=f"get_synonyms_by_{namespace}")(_make_synonym_tool(namespace))
+        mcp.tool(name=f"pubchem_get_synonym_by_{namespace}")(_make_synonym_tool(namespace))
     for namespace in CID_NAMESPACES:
-        mcp.tool(name=f"get_cids_by_{namespace}")(_make_cid_resolver(namespace))
+        mcp.tool(name=f"pubchem_resolve_cid_by_{namespace}")(_make_cid_resolver(namespace))
     for namespace in SID_NAMESPACES:
-        mcp.tool(name=f"get_sids_by_{namespace}")(_make_sid_resolver(namespace))
+        mcp.tool(name=f"pubchem_resolve_sid_by_{namespace}")(_make_sid_resolver(namespace))
     for namespace in AID_NAMESPACES:
-        mcp.tool(name=f"get_aids_by_{namespace}")(_make_aid_resolver(namespace))
+        mcp.tool(name=f"pubchem_resolve_aid_by_{namespace}")(_make_aid_resolver(namespace))
     for namespace in COMPOUND_NAMESPACES:
         mcp.tool(name=f"download_by_{namespace}")(_make_download(namespace))
