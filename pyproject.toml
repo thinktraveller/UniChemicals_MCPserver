@@ -4,6 +4,8 @@ version = "0.1.1"
 description = "An MCP server for PubChem database using PubChemPy."
 readme = "README.md"
 requires-python = ">=3.10"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 dependencies = [
     "mcp[cli]>=1.0.0",
     "pubchempy>=1.0.5",
