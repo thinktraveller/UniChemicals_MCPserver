@@ -44,7 +44,7 @@
 
 ## 🛠️ 可用工具列表 (API 参考)
 
-本服务器提供 **39 个语义化工具**，每个工具按 `pubchem_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
+本服务器提供 **40 个语义化工具**，每个工具按 `pubchem_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
 
 ### 1. 化合物搜索 (`pubchem_search_compound_by_*`)
 从 PubChem 数据库中检索经过标准化的化合物记录。
@@ -102,6 +102,7 @@
   - `pubchem_get_conformer_by_cid`: 3D 坐标（注意：并非所有化合物都有 3D 数据）。
   - `pubchem_get_descriptor_by_cid`: 计算描述符（MolecularWeight、XLogP、TPSA、HBondDonorCount 等）；支持可选 `properties` 列表，默认返回标准集。
   - `pubchem_get_structure_by_cid`: 原子/键拓扑（元素、坐标、键级）。
+  - `pubchem_get_spectrum_by_cid`: 光谱数据（1H/13C NMR、GC-MS、MS-MS、LC-MS、IR、FTIR、ATR-IR、UV、Raman），经 PubChem PUG-View 获取；并非所有化合物都有光谱。
 
 ---
 

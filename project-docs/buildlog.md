@@ -165,6 +165,43 @@
 
 ---
 
+## [2026-08-07 02:00] 步骤 6 完成：PUG-View 直连光谱工具
+
+### 执行的任务
+- `pyproject.toml` 新增依赖 `requests>=2.31`（实际解析 2.34.2），`uv sync` 安装成功；
+- 实测 PUG-View「Spectral Information」真实 JSON 结构（CID 2244）：`Record.Section` 树包含 1D/2D NMR、Mass Spectrometry（GC-MS/MS-MS/LC-MS）、UV、IR（FTIR/ATR-IR）、Raman 等；`Information` 节点值形态：`StringWithMarkup`（734 个）、`ExternalDataURL+MimeType` 图片链接（79 个）、`Number`（32 个）；
+- `client.py` 新增 PUG-View 直连封装：
+  - `fetch_pug_view()`：30s 超时、503/网络错误退避重试 3 次、自定义 User-Agent；
+  - `get_spectrum()` / `parse_spectrum_section()`：按 TOCHeading 定位光谱类型（支持别名如 1H NMR/FTIR/GC-MS 与大小写不敏感的完整标题），按 ReferenceNumber 分组解析光谱，无该类型数据时抛出明确 ValueError；
+  - `SPECTRUM_TYPE_ALIASES`：用户友好类型 → PUG-View 标题映射。
+- `registry.py` 新增工具 `pubchem_get_spectrum_by_cid(cid, spectrum_type)`（经 `safe_execute` 统一异常处理）。
+- README/README_zh 同步：工具数 39 → 40，新增光谱工具说明。
+
+### 关键变更
+- `pyproject.toml`：新增 `requests>=2.31`
+- `src/pubchem_mcp_server/client.py`：PUG-View 封装 + 光谱解析（约 120 行）
+- `src/pubchem_mcp_server/registry.py`：光谱工具工厂与注册
+- `README.md` / `README_zh.md`：工具清单更新
+
+### 验证结果
+- `tools/list`：40 个工具，`pubchem_get_spectrum_by_cid` 存在，schema 为 cid(int) + spectrum_type(str)；
+- 真实调用（联网）全部通过：
+  - `1H NMR`：返回 Spectra ID 1776、Instrument Type Bruker、600 MHz 等完整字段；
+  - `13C NMR`：Spectra ID 3097、峰值表 `Shifts [ppm]:Intensity`；
+  - `GC-MS`：Spectra ID 1003、Top 5 Peaks 等；
+  - `IR`：父级标题查询自动包含子类数据（FTIR/ATR-IR）；
+  - 错误路径：非法 CID 返回友好 `Error: 400 Client Error: PUGVIEW.BadRequest ...`，服务不崩溃；
+- `uv build` 成功（0.2.0）。
+
+### 遇到的问题及解决方案
+- 初测时 `requests` 未安装（ModuleNotFoundError）——本就是本步骤新增依赖，加入 `pyproject.toml` 后 `uv sync` 解决；
+- PUG-View 返回结构复杂（Section/Information 多层嵌套、值形态多样），按真实响应核对后实现三种值形态提取（StringWithMarkup 多段用 `; ` 连接、Number+Unit、ExternalDataURL 图片链接），并对无数据光谱返回明确错误。
+
+### 下一步计划
+- 步骤 7：端到端验证（`uv build` + `uvx --refresh` 远程 MCP 服务跑通）与 PyPI 发布。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务

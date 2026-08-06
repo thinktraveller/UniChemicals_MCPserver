@@ -44,7 +44,7 @@ Add the following to your MCP client configuration (e.g., `claude_desktop_config
 
 ## 🛠️ Available Tools (API Reference)
 
-This server exposes **39 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
+This server exposes **40 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
 
 ### 1. Compound Search (`pubchem_search_compound_by_*`)
 Retrieve standardized compound records from the PubChem database.
@@ -102,6 +102,7 @@ Retrieve 3D conformers, computed descriptors, and atom/bond topology for a singl
   - `pubchem_get_conformer_by_cid`: 3D coordinates (note: not every compound has 3D data).
   - `pubchem_get_descriptor_by_cid`: computed descriptors (MolecularWeight, XLogP, TPSA, HBondDonorCount, etc.); accepts an optional `properties` list, defaults to the standard set.
   - `pubchem_get_structure_by_cid`: atom/bond topology (elements, coordinates, bond orders).
+  - `pubchem_get_spectrum_by_cid`: spectral data (1H/13C NMR, GC-MS, MS-MS, LC-MS, IR, FTIR, ATR-IR, UV, Raman) via PubChem PUG-View; not every compound has spectra.
 
 ---
 

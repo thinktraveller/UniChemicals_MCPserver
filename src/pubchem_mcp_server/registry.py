@@ -292,6 +292,25 @@ def _make_structure_tool() -> Callable[..., str]:
     return tool
 
 
+def _make_spectrum_tool() -> Callable[..., str]:
+    doc = (
+        "Get PubChem spectral data for a compound by cid.\n\n"
+        "- cid: the compound identifier (integer)\n"
+        "- spectrum_type: one of 1H NMR, 13C NMR, 1H-13C NMR, GC-MS, MS-MS, LC-MS, "
+        "IR, FTIR, ATR-IR, UV, Raman\n\n"
+        "Data comes from PubChem PUG-View (Spectral Information heading). "
+        "Not every compound has spectral data.\n"
+        "Returns a JSON string of the parsed spectra, or Error: <message>."
+    )
+
+    def tool(cid: int, spectrum_type: str) -> str:
+        return safe_execute(client.get_spectrum, cid, spectrum_type)
+
+    tool.__name__ = "pubchem_get_spectrum_by_cid"
+    tool.__doc__ = doc
+    return tool
+
+
 def register_all(mcp: Any) -> None:
     """Register every MCP tool on the given FastMCP instance."""
     for namespace in COMPOUND_NAMESPACES:
@@ -315,3 +334,4 @@ def register_all(mcp: Any) -> None:
     mcp.tool(name="pubchem_get_conformer_by_cid")(_make_conformer_tool())
     mcp.tool(name="pubchem_get_descriptor_by_cid")(_make_descriptor_tool())
     mcp.tool(name="pubchem_get_structure_by_cid")(_make_structure_tool())
+    mcp.tool(name="pubchem_get_spectrum_by_cid")(_make_spectrum_tool())
