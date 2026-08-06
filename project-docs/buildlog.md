@@ -26,3 +26,29 @@
 - 步骤 2：模块化重构（拆分为 server.py / registry.py / client.py / utils.py，引入工具工厂消除重复）。
 
 ---
+
+## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
+
+### 执行的任务
+- 用户执行 `uv run pubchempy-mcp-server` 冒烟测试时发现 `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`。
+- 诊断根因：依赖约束 `mcp[cli]>=1.0.0` 解析到了最新的 mcp 2.0.0，而 mcp 2.0 已从 SDK 中移除 `FastMCP`（高层 API 迁出），`mcp/server/` 下不再有 `fastmcp.py`（本地已核实）。
+- 修复：按构建计划书技术选型（FastMCP + mcp 1.x API），将依赖收紧为 `mcp[cli]>=1.0.0,<2.0`，执行 `uv sync` 将环境降级到 mcp 1.29.0。
+
+### 关键变更
+- `pyproject.toml`：`mcp[cli]>=1.0.0` → `mcp[cli]>=1.0.0,<2.0`
+- 环境：`.venv` 中 mcp 2.0.0 降级为 1.29.0（`uv.lock` 按 `.gitignore` 规则不入库）
+
+### 验证结果
+- `uv sync` 成功，mcp 1.29.0 安装完成；
+- `uv run python -c "from pubchem_mcp_server.server import mcp"` 导入通过；
+- 真实 MCP 握手冒烟测试通过：发送 `initialize` → `initialized` → `tools/list`，服务正常响应，`serverInfo` = PubChemPy_MCP_Server / 1.29.0，`tools/list` 返回 41 个工具，进程退出码 0。
+
+### 遇到的问题及解决方案
+- mcp 2.0.0 移除 `mcp.server.fastmcp`，是上游破坏性变更，计划书风险提示未覆盖；已按计划书技术选型锁定 1.x 处理。
+- 测试过程中 PowerShell 管道向 stdio 服务喂入 BOM 字符导致 JSON 解析报错，属测试工具伪信号，改用 subprocess + 标准 JSON-RPC 握手后通过。
+- 备注：后续若需升级到 mcp 2.0 生态，可迁移到独立维护的 FastMCP 包并改用新 API，属于可选优化，不影响当前架构。
+
+### 下一步计划
+- 步骤 2：模块化重构（拆分为 server.py / registry.py / client.py / utils.py，引入工具工厂消除重复）。
+
+---
