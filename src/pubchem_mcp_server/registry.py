@@ -7,8 +7,7 @@ e.g. ``pubchem_search_compound_by_cid``. Actions:
 - ``get``: retrieve attributes (properties / synonyms)
 - ``resolve``: convert identifiers (CID / SID / AID)
 
-The legacy ``download_by_*`` tools are still registered here only until
-step 4 removes them. Adding a new identifier namespace is a one-line change.
+Adding a new identifier namespace is a one-line change.
 """
 
 from typing import Any, Callable, List, Optional
@@ -186,34 +185,6 @@ def _make_aid_resolver(namespace: str) -> Callable[..., str]:
     return tool
 
 
-def _make_download(namespace: str) -> Callable[..., str]:
-    id_type = _id_type(namespace)
-    doc = (
-        f"Download compound records identified by {namespace} and save to a file.\n\n"
-        f"- identifier: the {namespace} value (int for cid, str for others)\n"
-        "- outformat: XML, JSON, SDF, CSV, PNG or TXT\n"
-        "- path: absolute path where the file should be saved\n"
-        "- overwrite: whether to overwrite an existing file (default false)\n\n"
-        "Returns a confirmation string, or Error: <message>."
-    )
-
-    def tool(
-        identifier: id_type,
-        outformat: str,
-        path: str,
-        overwrite: Optional[bool] = False,
-    ) -> str:
-        try:
-            client.download(outformat, path, identifier, namespace, overwrite=overwrite)
-            return f"Successfully downloaded to {path}"
-        except Exception as exc:  # noqa: BLE001 - tool boundary: errors go back as text
-            return f"Error: {str(exc)}"
-
-    tool.__name__ = f"download_by_{namespace}"
-    tool.__doc__ = doc
-    return tool
-
-
 def register_all(mcp: Any) -> None:
     """Register every MCP tool on the given FastMCP instance."""
     for namespace in COMPOUND_NAMESPACES:
@@ -232,5 +203,3 @@ def register_all(mcp: Any) -> None:
         mcp.tool(name=f"pubchem_resolve_sid_by_{namespace}")(_make_sid_resolver(namespace))
     for namespace in AID_NAMESPACES:
         mcp.tool(name=f"pubchem_resolve_aid_by_{namespace}")(_make_aid_resolver(namespace))
-    for namespace in COMPOUND_NAMESPACES:
-        mcp.tool(name=f"download_by_{namespace}")(_make_download(namespace))

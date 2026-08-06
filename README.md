@@ -6,19 +6,21 @@
 
 ## 🔬 Introduction
 
-An [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) server for the PubChem database, powered by `PubChemPy`. 
+An [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) server for the PubChem database, powered by `PubChemPy`.
 
 **What does it do?**
 This server acts as a bridge between AI assistants (like Claude, Cursor, Trae) and the PubChem database, which is the world's largest collection of freely accessible chemical information. By integrating this MCP server, your AI assistant gains the ability to autonomously search, retrieve, and analyze millions of chemical compounds, substances, and bioassays directly within your chat or development environment.
 
 **Why use it?**
-Instead of manually browsing the PubChem website to find molecular formulas, weights, structures (SMILES/InChI), or downloading 3D SDF files, you can simply ask your AI assistant. The AI can use the provided tools to query the database, batch retrieve properties for multiple chemicals, and even download structure files to your local machine for further research.
+Instead of manually browsing the PubChem website to find molecular formulas, weights, structures (SMILES/InChI), synonyms or 3D conformers, you can simply ask your AI assistant. The AI can use the provided tools to query the database and batch retrieve properties for multiple chemicals.
+
+> **Data source:** all data is fetched in real time from PubChem's official REST services (PUG REST / PUG-View). This server keeps no local cache or database.
 
 ---
 
 ## 🚀 Installation & Configuration
 
-You can use this server directly via `uvx` without manual installation. 
+You can use this server directly via `uvx` without manual installation.
 
 Add the following to your MCP client configuration (e.g., `claude_desktop_config.json`):
 
@@ -42,63 +44,53 @@ Add the following to your MCP client configuration (e.g., `claude_desktop_config
 
 ## 🛠️ Available Tools (API Reference)
 
-This server exposes over 40 distinct tools, carefully categorized by their primary function and identifier namespace to ensure precise AI execution.
+This server exposes **34 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
 
-### 1. Compound Search (`get_compounds_by_*`)
+### 1. Compound Search (`pubchem_search_compound_by_*`)
 Retrieve standardized compound records from the PubChem database.
-- **Tools**: 
-  - `get_compounds_by_cid`
-  - `get_compounds_by_name`
-  - `get_compounds_by_smiles`
-  - `get_compounds_by_sdf`
-  - `get_compounds_by_inchi`
-  - `get_compounds_by_inchikey`
-  - `get_compounds_by_formula`
-- **Arguments**: 
+- **Tools**:
+  - `pubchem_search_compound_by_cid`
+  - `pubchem_search_compound_by_name`
+  - `pubchem_search_compound_by_smiles`
+  - `pubchem_search_compound_by_sdf`
+  - `pubchem_search_compound_by_inchi`
+  - `pubchem_search_compound_by_inchikey`
+  - `pubchem_search_compound_by_formula`
+- **Arguments**:
   - `identifier`: The search query (int for cid, str for others).
   - `searchtype` (Optional): Advanced search type (`substructure`, `superstructure`, `similarity`).
 
-### 2. Substance Search (`get_substances_by_*`)
+### 2. Substance Search (`pubchem_search_substance_by_*`)
 Retrieve raw, unstandardized substance records as originally deposited to PubChem.
-- **Tools**: 
-  - `get_substances_by_sid`
-  - `get_substances_by_name`
-  - `get_substances_by_sourceid` (requires `sourceid` and `source_name`)
+- **Tools**:
+  - `pubchem_search_substance_by_sid`
+  - `pubchem_search_substance_by_name`
+  - `pubchem_search_substance_by_sourceid` (requires `sourceid` and `source_name`)
 
-### 3. Assay Search (`get_assays_by_*`)
+### 3. Assay Search (`pubchem_search_assay_by_aid`)
 Retrieve bioassay (biological activity) records.
-- **Tools**: 
-  - `get_assays_by_aid`
+- **Tools**:
+  - `pubchem_search_assay_by_aid`
 
-### 4. Properties Retrieval (`get_properties_by_*`)
+### 4. Properties Retrieval (`pubchem_get_property_by_*`)
 Efficiently retrieve specific chemical properties in batch without downloading the entire compound record.
-- **Tools**: 
-  - `get_properties_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
-- **Arguments**: 
+- **Tools**:
+  - `pubchem_get_property_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+- **Arguments**:
   - `properties`: A list of desired properties (e.g., `['MolecularFormula', 'MolecularWeight', 'InChI', 'CanonicalSMILES', 'IsomericSMILES', 'XLogP']`).
   - `identifier`: The search query.
 
-### 5. Synonyms & Aliases (`get_synonyms_by_*`)
+### 5. Synonyms & Aliases (`pubchem_get_synonym_by_*`)
 Fetch all known aliases, systematic names, and trade names for a given chemical.
-- **Tools**: 
-  - `get_synonyms_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+- **Tools**:
+  - `pubchem_get_synonym_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
 
-### 6. Identifier Conversion 
+### 6. Identifier Resolution (`pubchem_resolve_*_by_*`)
 Convert between different chemical identifiers (e.g., finding the CID for a specific name or SMILES).
 - **Tools**:
-  - `get_cids_by_name`, `smiles`, `inchi`, `inchikey`, `formula`
-  - `get_sids_by_cid`, `name`
-  - `get_aids_by_cid`, `name`
-
-### 7. File Download (`download_by_*`)
-Download chemical structure files or data tables directly to your local filesystem.
-- **Tools**: 
-  - `download_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
-- **Arguments**:
-  - `identifier`: The search query.
-  - `outformat`: The desired file format (`XML`, `JSON`, `SDF`, `CSV`, `PNG`, `TXT`).
-  - `path`: The absolute path where the file should be saved.
-  - `overwrite` (Optional): Whether to overwrite if the file already exists.
+  - `pubchem_resolve_cid_by_name`, `smiles`, `inchi`, `inchikey`, `formula`
+  - `pubchem_resolve_sid_by_cid`, `name`
+  - `pubchem_resolve_aid_by_cid`, `name`
 
 ---
 
@@ -118,8 +110,12 @@ uv run pubchempy-mcp-server
 
 ## 📜 License
 
-This project is dual-licensed under the **AGPL-3.0 License** with an additional **Commercial Use Restriction** clause. 
-Any commercial use requires a separate commercial license from the author. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **AGPL-3.0 License** with an additional **Commercial Use Restriction** clause.
+
+- **Copyleft:** the AGPL-3.0 license is infectious — any derivative work or networked service based on this project must be released under the same license terms.
+- **Commercial use:** any commercial use requires a separate commercial license from the author. Without such authorization, commercial use is prohibited.
+
+See the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 

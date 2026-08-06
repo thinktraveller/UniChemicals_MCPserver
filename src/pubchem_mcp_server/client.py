@@ -68,13 +68,3 @@ def get_aids(identifier: Any, namespace: str) -> Any:
     """Resolve identifiers to assay IDs (AIDs)."""
     return pcp.get_aids(identifier, namespace)
 
-
-def download(
-    outformat: str,
-    path: Any,
-    identifier: Any,
-    namespace: str = "cid",
-    overwrite: bool = False,
-) -> None:
-    """Download compound records to a file (step-2 equivalence only; removed in step 4)."""
-    pcp.download(outformat, path, identifier, namespace, overwrite=overwrite)

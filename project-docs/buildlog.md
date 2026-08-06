@@ -95,6 +95,39 @@
 
 ---
 
+## [2026-08-07 01:24] 步骤 4 完成：移除下载工具并同步文档与许可证元数据
+
+### 执行的任务
+- 从 `registry.py` 删除 `_make_download` 工厂与 7 个 `download_by_*` 工具注册（cid/name/smiles/sdf/inchi/inchikey/formula，计划书写 6 个为笔误，实际 7 个）；
+- 从 `client.py` 删除 `download()` 封装（不再调用 `pcp.download`）；
+- 重写 `README.md` 与 `README_zh.md`：
+  - 工具清单全部替换为 34 个语义化新名称（search/get/resolve 六组）；
+  - 删除「文件下载」工具组及所有下载示例/介绍；
+  - 新增「数据来源」说明：所有数据实时来自 PubChem 官方 REST 服务（PUG REST / PUG-View），无本地缓存；
+  - 许可证章节补充说明：AGPL-3.0 具传染性 + 商用需单独授权。
+- 版本号 `0.1.1 → 0.2.0`（破坏性变更）。
+
+### 关键变更
+- `src/pubchem_mcp_server/registry.py`：删除下载工厂与注册
+- `src/pubchem_mcp_server/client.py`：删除 `download()`
+- `README.md` / `README_zh.md`：工具清单、数据来源、许可证说明全面更新
+- `pyproject.toml`：`version = "0.2.0"`
+
+### 验证结果
+- `tools/list`：总计 34 个工具，全部为 `pubchem_*` 前缀，无任何 download 工具；
+- README/README_zh 全文检索：无 `download_by_`、无「文件下载」、无旧工具名（`get_compounds_by_*` 等）残留；
+- `uv build` 成功生成 `pubchempy_mcp_server-0.2.0` wheel + sdist；
+- 0.2.0 wheel METADATA 验证：`Version: 0.2.0`、`License-Expression: AGPL-3.0-only`、`License-File: LICENSE`；
+- 清理 dist 中过期的 0.1.1 旧构建产物（避免步骤 7 误传）。
+
+### 遇到的问题及解决方案
+- 无（计划书「6 个下载工具」与实际 7 个的差异已在步骤 3 记录并按实际数量处理）。
+
+### 下一步计划
+- 步骤 5：补充工具族（批量查询、3D conformer、描述符、原子/键结构），继续挖掘 PubChemPy 能力。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务
