@@ -44,7 +44,7 @@
 
 ## 🛠️ 可用工具列表 (API 参考)
 
-本服务器提供 **34 个语义化工具**，每个工具按 `pubchem_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
+本服务器提供 **39 个语义化工具**，每个工具按 `pubchem_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
 
 ### 1. 化合物搜索 (`pubchem_search_compound_by_*`)
 从 PubChem 数据库中检索经过标准化的化合物记录。
@@ -56,9 +56,11 @@
   - `pubchem_search_compound_by_inchi`
   - `pubchem_search_compound_by_inchikey`
   - `pubchem_search_compound_by_formula`
+  - `pubchem_search_compound_by_cids`（批量：传入 CID 列表）
 - **参数说明**:
   - `identifier`: 搜索关键词（cid 为整数，其余为字符串）。
   - `searchtype` (可选): 高级搜索类型 (`substructure` 子结构, `superstructure` 超结构, `similarity` 相似度)。
+  - `cids`（批量工具）: CID 列表（单次不超过 100 个）。
 
 ### 2. 物质搜索 (`pubchem_search_substance_by_*`)
 检索最初提交给 PubChem 的未经标准化的原始物质记录。
@@ -76,9 +78,11 @@
 无需下载完整的化合物记录，即可高效地批量获取特定的化学属性。
 - **工具列表**:
   - `pubchem_get_property_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_property_by_cids`（批量：传入 CID 列表）
 - **参数说明**:
   - `properties`: 需要获取的属性列表 (例如：`['MolecularFormula', 'MolecularWeight', 'InChI', 'CanonicalSMILES', 'IsomericSMILES', 'XLogP']`)。
   - `identifier`: 搜索关键词。
+  - `cids`（批量工具）: CID 列表（单次不超过 100 个）。
 
 ### 5. 同义词与别名 (`pubchem_get_synonym_by_*`)
 获取特定化学物质的所有已知别名、系统命名和商品名。
@@ -91,6 +95,13 @@
   - `pubchem_resolve_cid_by_name`, `smiles`, `inchi`, `inchikey`, `formula`
   - `pubchem_resolve_sid_by_cid`, `name`
   - `pubchem_resolve_aid_by_cid`, `name`
+
+### 7. 3D 结构与描述符 (`pubchem_get_*_by_cid`)
+获取单个化合物的 3D 构象、计算描述符与原子/键拓扑。
+- **工具列表**:
+  - `pubchem_get_conformer_by_cid`: 3D 坐标（注意：并非所有化合物都有 3D 数据）。
+  - `pubchem_get_descriptor_by_cid`: 计算描述符（MolecularWeight、XLogP、TPSA、HBondDonorCount 等）；支持可选 `properties` 列表，默认返回标准集。
+  - `pubchem_get_structure_by_cid`: 原子/键拓扑（元素、坐标、键级）。
 
 ---
 

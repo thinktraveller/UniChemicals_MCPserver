@@ -68,3 +68,33 @@ def get_aids(identifier: Any, namespace: str) -> Any:
     """Resolve identifiers to assay IDs (AIDs)."""
     return pcp.get_aids(identifier, namespace)
 
+
+def get_structure(identifier: int) -> dict:
+    """Return atom/bond topology (structure) for a compound."""
+    compounds = pcp.get_compounds(identifier, "cid")
+    if not compounds:
+        return {"cid": identifier, "atoms": [], "bonds": []}
+    compound = compounds[0]
+    return {
+        "cid": compound.cid,
+        "atoms": [vars(atom) for atom in compound.atoms],
+        "bonds": [vars(bond) for bond in compound.bonds],
+    }
+
+
+def get_conformer(identifier: int) -> dict:
+    """Return 3D conformer data (atoms with 3D coordinates) for a compound.
+
+    Uses ``vars`` instead of ``Compound.to_dict()`` because PubChemPy 1.0.5's
+    ``to_dict`` crashes on 3D records where ``fingerprint`` is missing.
+    """
+    compounds = pcp.get_compounds(identifier, "cid", record_type="3d")
+    if not compounds:
+        return {"cid": identifier, "atoms": [], "bonds": []}
+    compound = compounds[0]
+    return {
+        "cid": compound.cid,
+        "coordinate_type": getattr(compound, "coordinate_type", None),
+        "atoms": [vars(atom) for atom in compound.atoms],
+        "bonds": [vars(bond) for bond in compound.bonds],
+    }

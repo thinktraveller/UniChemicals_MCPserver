@@ -128,6 +128,43 @@
 
 ---
 
+## [2026-08-07 01:35] 步骤 5 完成：补充工具族（批量/3D/描述符/原子键）
+
+### 执行的任务
+- 先联网实测 PubChemPy 1.0.5 能力，确认真实返回结构后实现 5 个新工具：
+  - `pubchem_search_compound_by_cids`：CID 列表批量查询（实测 [2244,2245,2246] 返回 3 条记录）
+  - `pubchem_get_property_by_cids`：CID 列表批量属性
+  - `pubchem_get_conformer_by_cid`：3D 构象（`record_type='3d'`，返回原子 x/y/z 坐标与键）
+  - `pubchem_get_descriptor_by_cid`：计算描述符全集（默认 21 项：MolecularFormula/MolecularWeight/ExactMass/XLogP/TPSA/Complexity/Charge/HBD/HBA/RotatableBond/HeavyAtom/IsotopeAtom/立体计数/Volume3D 等；支持可选 properties 列表）
+  - `pubchem_get_structure_by_cid`：原子/键拓扑（`vars(atom)` / `vars(bond)` 提取 aid/element/坐标/键级）
+- 新增 `client.get_conformer()` 与 `client.get_structure()`；`utils.to_json_safe` 增加 to_dict 失败的兜底序列化。
+- README.md / README_zh.md 同步：工具数 34 → 39，新增批量与 3D/描述符章节。
+
+### 关键变更
+- `src/pubchem_mcp_server/client.py`：新增 `get_conformer()`、`get_structure()`
+- `src/pubchem_mcp_server/registry.py`：新增 `DEFAULT_DESCRIPTORS` 常量与 5 个工具工厂/注册
+- `src/pubchem_mcp_server/utils.py`：`to_json_safe` 兜底 + `_json_default` 递归序列化
+- `README.md` / `README_zh.md`：工具清单更新
+
+### 验证结果
+- `tools/list`：39 个工具，5 个新工具 schema 正确（cids: array[integer]、properties 可选数组等）；
+- 真实调用（联网）全部通过：
+  - 批量查询返回 3 条记录；批量属性返回 2244/2245 的属性字典；
+  - `pubchem_get_conformer_by_cid(2244)` 返回 `coordinate_type: "3d"` + 带 z 坐标的原子；
+  - `pubchem_get_descriptor_by_cid(2244)` 返回 21 项描述符；
+  - `pubchem_get_structure_by_cid(2244)` 返回 atoms/bonds 拓扑；
+  - 错误路径：非法 CID 返回友好 `Error: PubChem HTTP Error 400 ...`，服务不崩溃。
+
+### 遇到的问题及解决方案
+- **PubChemPy 1.0.5 已知缺陷**：`Compound.to_dict()` 会触发 `cactvs_fingerprint` 属性（`self.fingerprint[8:]`），3D 记录缺 fingerprint 字段导致 `'NoneType' object is not subscriptable`。已按根因修复：conformer 工具改用 `client.get_conformer` 手工构建字典（不经过 to_dict），并在 `utils.to_json_safe` 增加兜底递归序列化，防御其他记录类型。
+- 描述符属性名初测含无效项 `ConformerModel3D`（PUG REST 返回 400 Invalid property），逐名实测后从默认集剔除；默认集 21 项均为已验证合法属性名。
+- 批量请求限制：docstring 已注明单次不超过 100 个 CID。
+
+### 下一步计划
+- 步骤 6：新增 PUG-View 直连能力（光谱工具），`pyproject.toml` 增加 `requests` 依赖。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务

@@ -44,7 +44,7 @@ Add the following to your MCP client configuration (e.g., `claude_desktop_config
 
 ## 🛠️ Available Tools (API Reference)
 
-This server exposes **34 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
+This server exposes **39 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
 
 ### 1. Compound Search (`pubchem_search_compound_by_*`)
 Retrieve standardized compound records from the PubChem database.
@@ -56,9 +56,11 @@ Retrieve standardized compound records from the PubChem database.
   - `pubchem_search_compound_by_inchi`
   - `pubchem_search_compound_by_inchikey`
   - `pubchem_search_compound_by_formula`
+  - `pubchem_search_compound_by_cids` (batch: pass a list of CIDs)
 - **Arguments**:
   - `identifier`: The search query (int for cid, str for others).
   - `searchtype` (Optional): Advanced search type (`substructure`, `superstructure`, `similarity`).
+  - `cids` (for the batch tool): A list of CIDs (at most 100 per request).
 
 ### 2. Substance Search (`pubchem_search_substance_by_*`)
 Retrieve raw, unstandardized substance records as originally deposited to PubChem.
@@ -76,9 +78,11 @@ Retrieve bioassay (biological activity) records.
 Efficiently retrieve specific chemical properties in batch without downloading the entire compound record.
 - **Tools**:
   - `pubchem_get_property_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_property_by_cids` (batch: pass a list of CIDs)
 - **Arguments**:
   - `properties`: A list of desired properties (e.g., `['MolecularFormula', 'MolecularWeight', 'InChI', 'CanonicalSMILES', 'IsomericSMILES', 'XLogP']`).
   - `identifier`: The search query.
+  - `cids` (for the batch tool): A list of CIDs (at most 100 per request).
 
 ### 5. Synonyms & Aliases (`pubchem_get_synonym_by_*`)
 Fetch all known aliases, systematic names, and trade names for a given chemical.
@@ -91,6 +95,13 @@ Convert between different chemical identifiers (e.g., finding the CID for a spec
   - `pubchem_resolve_cid_by_name`, `smiles`, `inchi`, `inchikey`, `formula`
   - `pubchem_resolve_sid_by_cid`, `name`
   - `pubchem_resolve_aid_by_cid`, `name`
+
+### 7. 3D Structure & Descriptors (`pubchem_get_*_by_cid`)
+Retrieve 3D conformers, computed descriptors, and atom/bond topology for a single compound.
+- **Tools**:
+  - `pubchem_get_conformer_by_cid`: 3D coordinates (note: not every compound has 3D data).
+  - `pubchem_get_descriptor_by_cid`: computed descriptors (MolecularWeight, XLogP, TPSA, HBondDonorCount, etc.); accepts an optional `properties` list, defaults to the standard set.
+  - `pubchem_get_structure_by_cid`: atom/bond topology (elements, coordinates, bond orders).
 
 ---
 
