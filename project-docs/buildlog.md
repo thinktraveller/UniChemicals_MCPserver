@@ -202,6 +202,32 @@
 
 ---
 
+## [2026-08-07 02:06] 步骤 7 进行中：版本升至 0.3.0，本地端到端验证通过（待 PyPI 发布）
+
+### 执行的任务
+- 用户确认：PyPI 包名 `pubchempy-mcp-server` 未被占用，且 0.2.0 已由用户此前发布过，本次构建打包为 **0.3.0**（`uv publish` 由用户执行）。
+- 版本号统一升至 0.3.0：`pyproject.toml`（version）+ `client.py`（PUG-View User-Agent）；
+- 清理 dist 中 0.2.0 旧产物，`uv build` 成功生成 0.3.0 wheel + sdist；
+- 发布前最终端到端验证（MCP 握手 + 联网真实调用）全部通过。
+
+### 关键变更
+- `pyproject.toml`：`version = "0.3.0"`
+- `src/pubchem_mcp_server/client.py`：`PUG_VIEW_USER_AGENT` → `pubchempy-mcp-server/0.3`
+- `dist/pubchempy_mcp_server-0.3.0-py3-none-any.whl` / `.tar.gz`（gitignore，不入库）
+
+### 验证结果
+- 0.3.0 wheel METADATA：`Version: 0.3.0`、`License-Expression: AGPL-3.0-only`、`Requires-Python: >=3.10`、依赖 `mcp[cli]<2.0,>=1.0.0` / `pandas>=2.0.0` / `pubchempy>=1.0.5` / `requests>=2.31`；
+- 最终端到端：`tools/list` 40 个工具（全部 `pubchem_*` 前缀）；search / batch / conformer / descriptor / spectrum 五个关键工具真实调用全部 `isError=False`，服务退出码 0。
+
+### 遇到的问题及解决方案
+- 无。版本号策略已按用户确认调整为 0.3.0（避免与已发布的 0.2.0 冲突）。
+
+### 下一步计划
+- 用户执行 `uv publish` 发布 0.3.0 到 PyPI；
+- 发布完成后，用 `uvx --refresh pubchempy-mcp-server` 在独立环境验证远程 MCP 服务（工具列表 40 个一致、真实调用正常），然后写入构建完成标记。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务
