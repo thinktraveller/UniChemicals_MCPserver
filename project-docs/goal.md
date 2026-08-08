@@ -166,6 +166,24 @@ v1.0.0 交付：MCP server 同时提供 `pubchem` 与 `cas` 两族工具；`cas`
   - 核心目标 / 期望成果 / 成功标准 / 范围界定 / 约束条件
 <!-- GOAL-QA-R006-END -->
 
+### QA-R007：v1.1.0 收尾：unichemicals 调用一致性收口与 pubchempy 旧包清理
+<!-- GOAL-QA-R007-START -->
+- **提问时间**：2026-08-09 00:07
+- **提问目的**：用户提出两项收尾步骤（1. 修改 readme、mcp.json 等文件，保持调用库为 unichemical；2. 清理掉 pubchempy 的旧包等内容）。v1.1.0 已完成包名与显示名统一，本步骤属于收口；其中「清理 pubchempy 旧包」的范围存在歧义（本地构建产物 / PyPI 旧包 / 文档旧引用 / 第三方依赖），需要先澄清，避免误删第三方依赖 `pubchempy` 导致 PubChem 数据源失效。
+- **问题列表**
+  1. 步骤 1 的收尾范围：README / README_zh 与 mcp-client-example.json 已改为 `unichemicals-mcp-server`；仓库中没有 `mcp.json` 文件，你指的是 `mcp-client-example.json`（或你 MCP 客户端里实际使用的配置文件）吗？是否还需要把 README 中「基于 PubChemPy 构建」等旧定位描述一并调整？
+  2. 步骤 2「清理 pubchempy 旧包」的范围是什么？（a. 仅清理本地 `dist/` 下的旧 wheel/sdist 产物（如 `pubchempy_mcp_server-0.1.1/0.2.0/0.3.0`）；b. 从 PyPI 下架旧包 `pubchempy-mcp-server`（0.3.0 及更早，需你在 PyPI 操作）；c. 清理文档/示例中的旧名引用；d. 其他）
+  3. 是否确认**不删除** `pyproject.toml` 中的第三方依赖 `pubchempy>=1.0.5`（它是 PubChem 数据源的工具库，删除会导致 40 个 `pubchem_*` 工具失效）？
+- **用户回答**
+  1. [等待用户回答]
+  2. [等待用户回答]
+  3. [等待用户回答]
+- **提炼结论**
+  - [收到回答后补充]
+- **影响的目标文档章节**
+  - 核心目标 / 范围界定 / 成功标准
+<!-- GOAL-QA-R007-END -->
+
 <!-- GOAL-QA-LOG-END -->
 
 ## 备注
