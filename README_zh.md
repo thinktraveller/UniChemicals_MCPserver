@@ -181,4 +181,4 @@ uv run unichemicals-mcp-server
 
 ## 🙏 致谢 (Acknowledgments)
 
-本项目是基于 [mcs07](https://github.com/mcs07) 开发的优秀 Python 库 **[PubChemPy](https://github.com/mcs07/PubChemPy)** 构建的 MCP 封装服务。我们向 PubChemPy 的原作者及所有贡献者表示最诚挚的感谢，感谢他们为访问 PubChem PUG REST API 提供了如此稳定、便捷的基础工具。
+UniChemicals MCP Server 是一个多数据库化学查询服务，数据源包括 **PubChem** 与 **CAS Common Chemistry**。其中 PubChem 数据源基于 [mcs07](https://github.com/mcs07) 开发的优秀 Python 库 **[PubChemPy](https://github.com/mcs07/PubChemPy)** 接入，它是本项目依赖的底层库之一。我们向 PubChemPy 的原作者及所有贡献者表示最诚挚的感谢，感谢他们为访问 PubChem PUG REST API 提供了如此稳定、便捷的基础工具。

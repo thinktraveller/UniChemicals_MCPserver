@@ -181,4 +181,4 @@ See the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-This project is built upon and serves as an MCP wrapper for the excellent **[PubChemPy](https://github.com/mcs07/PubChemPy)** library created by [mcs07](https://github.com/mcs07). We extend our deepest gratitude to the original author and contributors of PubChemPy for providing such a robust Python interface to the PubChem PUG REST API.
+UniChemicals MCP Server is a multi-database chemistry query service with multiple data sources, currently integrating **PubChem** and **CAS Common Chemistry**. The PubChem data source is powered by the excellent **[PubChemPy](https://github.com/mcs07/PubChemPy)** library created by [mcs07](https://github.com/mcs07), which is one of the underlying libraries we rely on. We extend our deepest gratitude to the original author and contributors of PubChemPy for providing such a robust Python interface to the PubChem PUG REST API.

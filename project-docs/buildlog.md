@@ -394,3 +394,21 @@
 
 ### 下一步计划
 - 可选（用户决定）：是否在 PyPI 下架旧包 `pubchempy-mcp-server`（0.3.0）；README 中「基于 PubChemPy 构建」定位描述是否调整（未答复，默认保留）。
+
+## [2026-08-09 00:20] 步骤 20 补充：README 定位描述调整为 UniChemicals 多数据源视角
+
+### 执行的任务
+- 用户确认两项收尾决策：PyPI 旧包 `pubchempy-mcp-server` **不下架**（保留兼容）；README 中「基于 PubChemPy 构建」的定位描述**需要调整**。
+- 修改 README / README_zh 的致谢（Acknowledgments）段落，把项目定位从「基于 PubChemPy 构建的 MCP 封装服务」改为「UniChemicals 多数据库化学查询服务，PubChemPy 为 PubChem 数据源的底层依赖库之一」，保留对 PubChemPy 作者的致谢。
+
+### 关键变更
+- `README.md`：Acknowledgments 段落重写（同上定位）。
+- `README_zh.md`：致谢段落重写（同上定位）。
+- `project-docs/goal.md`：QA-R007 收尾决策回填。
+
+### 验证结果
+- README 中不再出现「built upon PubChemPy / 基于 PubChemPy 构建」的单一库定位表述；
+- 两处均保留 PubChemPy 链接与致谢；`uvx --refresh unichemicals-mcp-server` 等调用名不受影响。
+
+### 下一步计划
+- 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0 后可正式对外使用；旧包 `pubchempy-mcp-server` 保留不下架。
