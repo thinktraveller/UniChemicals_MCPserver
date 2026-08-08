@@ -228,6 +228,32 @@
 
 ---
 
+## [2026-08-08 12:40] 🎉 项目构建完成
+
+### 完成情况
+- 用户已执行 `uv publish` 将 0.3.0 发布到 PyPI；
+- 独立环境验收（`uvx --refresh pubchempy-mcp-server`，从 PyPI 拉取 48 个包）通过：
+  - `tools/list` 返回 40 个工具，全部为 `pubchem_*` 语义化命名；
+  - `pubchem_get_spectrum_by_cid` 等新工具在列；
+  - 真实调用 `pubchem_search_compound_by_cid(2244)` 正常返回（`isError=False`），服务退出码 0；
+- 成功标准达成：`uv build` 成功 + 基于 `uvx` 的远程 MCP 服务跑通（可被 MCP 客户端正常调用）。
+
+### 验收记录
+- PyPI 包：`pubchempy-mcp-server` 0.3.0（`https://pypi.org/project/pubchempy-mcp-server/`）；
+- wheel 元数据：`License-Expression: AGPL-3.0-only`、`Requires-Python: >=3.10`、依赖 `mcp[cli]>=1.0.0,<2.0` / `pubchempy>=1.0.5` / `pandas>=2.0.0` / `requests>=2.31`；
+- 已知无害警告：mcp SDK 启动时输出 `pydantic_settings IncompleteFieldDefinitionWarning (lifespan)`，属上游库字段类型提示，不影响功能。
+
+### 最终交付审计
+- `project-docs/` 下本构建流程仅创建/修改 `buildlog.md`（未触碰 goal.md / project-plan.md / teach.md）；
+- 全部 7 个步骤均已记录完成情况、验证结果与问题处理；
+- 每次提交均显式列出文件路径，无 `_verify/` 脚本、无密钥、无构建产物入库；
+- 全部提交均在本仓库本地完成，`git push` 未执行（用户未授权）。
+
+### 下一步计划
+- ✅ 构建已全部完成，无待执行步骤。可进入「使用」阶段：在 MCP 客户端配置 `uvx --refresh pubchempy-mcp-server` 即可接入。
+
+---
+
 ## [2026-08-06 23:35] 步骤 1 补充修复：mcp 2.0 移除 FastMCP，锁定 1.x 并完成入口冒烟测试
 
 ### 执行的任务
