@@ -34,21 +34,28 @@ See `.env.example` for the template. The PubChem tools (`pubchem_*`) do not requ
 
 ### MCP client configuration
 
-Add the following to your MCP client configuration (e.g., `claude_desktop_config.json`):
+Add the following to your MCP client configuration (e.g., Cherry Studio `MCP Servers` import, or `claude_desktop_config.json`). A ready-to-use file is provided at [`mcp-client-example.json`](mcp-client-example.json):
 
 ```json
 {
   "mcpServers": {
-    "pubchempy_server": {
+    "unichemicals": {
       "command": "uvx",
       "args": [
         "--refresh",
         "pubchempy-mcp-server"
-      ]
+      ],
+      "env": {
+        "CAS_COMMON_CHEMISTRY_API_KEY": "your_api_key_here"
+      }
     }
   }
 }
 ```
+
+- Replace `your_api_key_here` with your real CAS Common Chemistry API token (the same value as `CAS_COMMON_CHEMISTRY_API_KEY` in `.env`). The `cas_*` tools read the key from this environment variable.
+- The `env` block is supported by Cherry Studio and most modern MCP clients. If your client does not support `env`, set the same variable in your OS/user environment instead.
+- Remove the `env` block if you only need the PubChem tools (`pubchem_*`).
 
 *Note: The `--refresh` flag ensures you always pull the latest version from PyPI.*
 

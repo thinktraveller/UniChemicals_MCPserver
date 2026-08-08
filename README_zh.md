@@ -34,21 +34,28 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
 
 ### MCP 客户端配置
 
-在你的 MCP 客户端配置文件（如 `claude_desktop_config.json`）中添加以下内容：
+在你的 MCP 客户端配置文件（如 Cherry Studio 的「MCP 服务器」导入，或 `claude_desktop_config.json`）中添加以下内容。也可直接使用现成文件 [`mcp-client-example.json`](mcp-client-example.json)：
 
 ```json
 {
   "mcpServers": {
-    "pubchempy_server": {
+    "unichemicals": {
       "command": "uvx",
       "args": [
         "--refresh",
         "pubchempy-mcp-server"
-      ]
+      ],
+      "env": {
+        "CAS_COMMON_CHEMISTRY_API_KEY": "your_api_key_here"
+      }
     }
   }
 }
 ```
+
+- 将 `your_api_key_here` 替换为你的真实 CAS Common Chemistry API 令牌（与 `.env` 中 `CAS_COMMON_CHEMISTRY_API_KEY` 的值一致）。`cas_*` 工具会从该环境变量读取 key。
+- `env` 段在 Cherry Studio 及大多数现代 MCP 客户端中受支持；若你的客户端不支持 `env`，请改在操作系统/用户环境变量中设置同名变量。
+- 如果只需要 PubChem 工具（`pubchem_*`），可删除 `env` 段。
 
 *提示：`--refresh` 参数确保每次启动客户端时，都会从 PyPI 获取并使用最新版本的服务器代码。*
 
