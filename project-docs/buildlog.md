@@ -2,6 +2,12 @@
 
 ## [2026-08-08] v1.0.0 构建记录（步骤 8–13：CAS Common Chemistry 接入）
 
+### 补充记录：MCP 客户端 JSON 接入示例（2026-08-08 16:33）
+
+- 新增 `mcp-client-example.json`：可直接导入 MCP 客户端的 `mcpServers` 配置（命令 `uvx --refresh pubchempy-mcp-server`），`env` 中提供 `CAS_COMMON_CHEMISTRY_API_KEY` 占位符，供 Cherry Studio / claude_desktop_config.json 等客户端使用。
+- README.md / README_zh.md 的「MCP client configuration」章节同步更新：引用该示例文件，说明 key 替换方式、不支持 `env` 的客户端改用系统环境变量、以及仅用 PubChem 工具时可移除 `env` 块。
+- 安全说明：示例中仅含 `your_api_key_here` 占位符，无真实 key 值入库。
+
 ### 步骤 8：官方文档核对与 API 只读探测
 
 #### 执行的任务
