@@ -182,7 +182,7 @@ v1.0.0 交付：MCP server 同时提供 `pubchem` 与 `cas` 两族工具；`cas`
   - 步骤 1 范围 = `mcp-client-example.json` 与 README 等面向调用方的文件，调用名统一为 `unichemicals-mcp-server`（v1.1.0 已基本完成，本步骤做收口复核）。
   - 步骤 2 范围 = 仅清理本地 `dist/` 下旧包名（`pubchempy_mcp_server-*`）的构建产物；不含 PyPI 下架、不含历史文档改写。
   - 约束 = 第三方依赖 `pubchempy>=1.0.5` 必须保留并验证可用（PubChem 数据源依赖）。
-  - 待确认项：README 中「基于 PubChemPy 构建」的旧定位描述是否调整未获明确答复（`未回答`），默认保持现状，如需调整可再确认。
+  - 收尾决策（用户确认）：PyPI 旧包 `pubchempy-mcp-server` **不下架**，保留兼容；README 中「基于 PubChemPy 构建」的定位描述**需要调整**为 UniChemicals 多数据源视角（已同步修改 README / README_zh 致谢段落，PubChemPy 降为“底层依赖库之一”并保留致谢）。
 - **影响的目标文档章节**
   - 核心目标 / 范围界定 / 成功标准 / 约束条件
 <!-- GOAL-QA-R007-END -->
