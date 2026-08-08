@@ -345,3 +345,29 @@
 - 步骤 2：模块化重构（拆分为 server.py / registry.py / client.py / utils.py，引入工具工厂消除重复）。
 
 ---
+
+## [2026-08-08 23:55] 步骤 14–18：包名统一为 unichemicals-mcp-server（v1.1.0 改名）
+
+### 执行的任务
+- 用户确认三项决策：最终包名 `unichemicals-mcp-server`；PyPI 发布由用户自行执行（步骤 19 不纳入）；统一 FastMCP 显示名 / User-Agent。
+- 按计划书 v1.1.0 步骤 14–18 执行改名：PyPI 占用检查 → pyproject 改名 → 重新生成 uv.lock → 更新客户端示例与中英文 README → 构建与 MCP 冒烟验证。
+
+### 关键变更
+- `pyproject.toml`：`[project] name` 与 `[project.scripts]` 由 `pubchempy-mcp-server` 改为 `unichemicals-mcp-server`（入口仍为 `pubchem.server:main`）；依赖 `pubchempy>=1.0.5`（第三方库）未动。
+- `src/pubchem/server.py`：FastMCP 显示名由 `UniChemicals_MCP_Server` 统一为 `unichemicals-mcp-server`；User-Agent 保持 `unichemicals-mcp-server/1.0`（此前已统一）。
+- `mcp-client-example.json`：`uvx --refresh` 改为 `unichemicals-mcp-server`。
+- `README.md` / `README_zh.md`：PyPI 徽章、客户端配置示例、`uv run` 命令同步改为新名；PubChemPy 致谢保留。
+- `uv.lock`：根包名重新生成为 `unichemicals-mcp-server v1.0.0`（该文件被 .gitignore 忽略，不入库）。
+- `project-docs/project-plan.md`：更新 v1.1.0 章节的执行状态、影响面清单与待确认项结论。
+
+### 验证结果
+- PyPI 占用检查：`https://pypi.org/pypi/unichemicals-mcp-server/json` 返回 404，规范名未被占用；
+- `uv build` 成功：`dist/unichemicals_mcp_server-1.0.0-py3-none-any.whl` + `.tar.gz`；
+- MCP 握手冒烟通过：`serverInfo` = `unichemicals-mcp-server / 1.29.0`，`tools/list` 51 个工具（40 pubchem + 11 cas）无回归；
+- 全仓残留检查：`rg -n -i "pubchempy-mcp-server"`（排除 .git/reference-projects/dist/.venv）仅剩 `project-docs/` 历史文档引用，预期保留。
+
+### 遇到的问题及解决方案
+- 沙箱限制：PyPI 网络检查与 uv 缓存访问被沙箱拦截，提权后执行成功；`uv.lock` 因 .gitignore 不入库，仅本地更新。
+
+### 下一步计划
+- ⏳ 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0，并用 `uvx --refresh unichemicals-mcp-server` 独立环境验收；旧包 `pubchempy-mcp-server` 0.3.0 保留兼容。

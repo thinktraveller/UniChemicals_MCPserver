@@ -627,6 +627,8 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 
 > **版本状态**：本增量章节规划把发行包名从 `pubchempy-mcp-server` 统一为 `unichemicals-mcp-server`（PyPI 规范名，与用户提出的 `unichemicals_mcpserver` 等价），背景是 v1.0.0 后服务已同时接入 PubChem 与 CAS 两个数据源，旧名不再贴切。此节**推翻**步骤 12/13 中「PyPI 包名保持 pubchempy-mcp-server 避免下游断裂」的旧决策（理由见文末 Q&A）。已有步骤 1–13 与既有 Q&A 内容保持不变，本次仅增量追加。
 
+> **执行状态（2026-08-08 23:55）**：用户已确认三项待确认项（包名 `unichemicals-mcp-server`；PyPI 发布由用户自行执行；统一 FastMCP 显示名 / User-Agent）。步骤 14–18 已执行完成并通过验证，详见 `project-docs/buildlog.md`；步骤 19（PyPI 发布）留给用户执行。
+
 ## 影响面清单（主 agent 已核查，执行时逐一核对）
 
 | 文件 | 位置 | 改动 |
@@ -636,7 +638,7 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 | `uv.lock` | 根包 `name` | 由 `uv lock` 重新生成（勿手改） |
 | `mcp-client-example.json` | `args` | `uvx --refresh` 旧名 → 新名 |
 | `README.md` / `README_zh.md` | PyPI 徽章、客户端配置示例、`uv run` 命令 | 旧名 → 新名 |
-| `src/pubchem/server.py` | FastMCP 显示名 | 已是 `UniChemicals_MCP_Server`，默认不改（见 Q&A） |
+| `src/pubchem/server.py` | FastMCP 显示名 | 已统一为 `unichemicals-mcp-server`（用户确认） |
 | `src/pubchem/client.py` | User-Agent | 已是 `unichemicals-mcp-server/1.0`，默认不改 |
 | `pyproject.toml` 依赖 | `pubchempy>=1.0.5` | 第三方库 PubChemPy，**禁止修改** |
 | `project-docs/*` | 历史引用 | 历史记录，默认不回改 |
@@ -692,7 +694,7 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 
 #### 风险提示
 - 只改 `name` 与 `[project.scripts]` 两处，误改依赖名会导致安装失败；
-- 若用户同时要求统一 FastMCP 显示名，需在本步骤同步改 `src/pubchem/server.py`（默认不做，见 Q&A）。
+- 用户已确认统一 FastMCP 显示名，本步骤同步将 `src/pubchem/server.py` 的 `FastMCP(...)` 显示名改为 `unichemicals-mcp-server`。
 
 ### 步骤 16：重新生成 uv.lock
 
@@ -748,7 +750,7 @@ rg -n -i "pubchempy-mcp-server" -S --glob '!.git/**' --glob '!reference-projects
 #### 验证方法
 - `uv build` 成功，dist 产物名为 `unichemicals_mcp_server-*.whl`；
 - wheel 内 `entry_points.txt` 为 `unichemicals-mcp-server = pubchem.server:main`；
-- MCP 握手 `serverInfo` = `UniChemicals_MCP_Server`，`tools/list` 51 个工具（40 pubchem + 11 cas）无回归；
+- MCP 握手 `serverInfo` = `unichemicals-mcp-server`，`tools/list` 51 个工具（40 pubchem + 11 cas）无回归；
 - `rg` 残留仅剩 `project-docs/` 历史文档引用（预期保留，不回改）。
 
 #### 风险提示
@@ -785,7 +787,7 @@ uvx --refresh unichemicals-mcp-server
 **A：** 该决策的背景是 v1.0.0 接入 CAS 后仍沿用旧名以避免下游断裂；但服务已成为双数据源，旧名 `pubchempy` 无法表达 UniChemicals 定位，且 1.0.0 尚未发布、改名无存量用户成本，属于零成本改名窗口。
 
 **Q：** 服务显示名 `UniChemicals_MCP_Server` 和 User-Agent 要不要一起改？
-**A：** 默认不改：二者已是新品牌（UniChemicals），与目标一致；若修改 FastMCP 显示名会改变 `serverInfo`，属破坏性变更，仅在用户明确要求时执行。
+**A：** 用户已确认统一：FastMCP 显示名已从 `UniChemicals_MCP_Server` 改为 `unichemicals-mcp-server`（与包名一致，`serverInfo` 相应变化属预期破坏性变更）；User-Agent 此前已是 `unichemicals-mcp-server/1.0`，保持不动。
 
 **Q：** `project-docs/` 下的历史引用要回改吗？
 **A：** 默认不回改：goal / project-plan / buildlog / teach 是历史记录，记录当时的事实与决策；只需更新面向未来的文档（README、示例、本次新步骤）。
@@ -795,6 +797,6 @@ uvx --refresh unichemicals-mcp-server
 
 ## 待用户确认项
 
-1. 最终包名写法：`unichemicals-mcp-server`（推荐）还是 `unichemicals_mcpserver`；
-2. 是否把 PyPI 发布（步骤 19）纳入本次执行范围；
-3. 是否需要同步统一 FastMCP 显示名 / User-Agent（默认不统一）。
+1. ✅（2026-08-08 已确认）最终包名：`unichemicals-mcp-server`；
+2. ✅（2026-08-08 已确认）PyPI 发布由用户自行执行，步骤 19 不纳入本次构建；
+3. ✅（2026-08-08 已确认）统一 FastMCP 显示名 / User-Agent（显示名改为 `unichemicals-mcp-server`，User-Agent 保持 `unichemicals-mcp-server/1.0`）。

@@ -1,5 +1,5 @@
 [project]
-name = "pubchempy-mcp-server"
+name = "unichemicals-mcp-server"
 version = "1.0.0"
 description = "An MCP server for multi-database chemistry queries (PubChem + CAS Common Chemistry)."
 readme = "README.md"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pubchempy-mcp-server = "pubchem.server:main"
+unichemicals-mcp-server = "pubchem.server:main"
 
 [build-system]
 requires = ["hatchling"]

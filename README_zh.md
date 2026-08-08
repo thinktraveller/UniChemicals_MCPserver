@@ -1,6 +1,6 @@
 # UniChemicals MCP Server
 
-[![PyPI version](https://badge.fury.io/py/pubchempy-mcp-server.svg)](https://badge.fury.io/py/pubchempy-mcp-server)
+[![PyPI version](https://badge.fury.io/py/unichemicals-mcp-server.svg)](https://badge.fury.io/py/unichemicals-mcp-server)
 
 [English Version](README.md)
 
@@ -43,7 +43,7 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
       "command": "uvx",
       "args": [
         "--refresh",
-        "pubchempy-mcp-server"
+        "unichemicals-mcp-server"
       ],
       "env": {
         "CAS_COMMON_CHEMISTRY_API_KEY": "your_api_key_here"
@@ -167,7 +167,7 @@ cd pubchem-mcp-server
 
 # 使用 uv 构建并运行
 uv build
-uv run pubchempy-mcp-server
+uv run unichemicals-mcp-server
 ```
 
 ## 📜 许可证 (License)

@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from cas.registry import register_all as register_cas
 from pubchem.registry import register_all as register_pubchem
 
-mcp = FastMCP("UniChemicals_MCP_Server")
+mcp = FastMCP("unichemicals-mcp-server")
 
 # Register tools from both database registries.
 register_pubchem(mcp)
