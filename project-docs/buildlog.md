@@ -371,3 +371,26 @@
 
 ### 下一步计划
 - ⏳ 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0，并用 `uvx --refresh unichemicals-mcp-server` 独立环境验收；旧包 `pubchempy-mcp-server` 0.3.0 保留兼容。
+
+## [2026-08-09 00:10] 步骤 20–21：unichemicals 调用一致性收口 + dist 旧产物清理
+
+### 执行的任务
+- 用户确认三项范围：步骤 1 所指配置文件为 `mcp-client-example.json`；步骤 2 仅清理本地 `dist/` 旧构建产物；保留第三方依赖 `pubchempy>=1.0.5`。
+- 收口复核 + 清理 dist + 校验第三方依赖（对应 goal.md QA-R007）。
+
+### 关键变更
+- `dist/`：删除旧包名产物 `pubchempy_mcp_server-1.0.0-py3-none-any.whl` 与 `.tar.gz`（用户提到的 0.1.1/0.2.0/0.3.0 此前已不存在）；保留 `unichemicals_mcp_server-1.0.0.*`。
+- `uv sync`：卸载虚拟环境中旧包名 `pubchempy-mcp-server==1.0.0`，清除残留的 `pubchempy_mcp_server-1.0.0.dist-info`。
+- 代码与配置文件无改动（v1.1.0 已统一调用名）。
+
+### 验证结果
+- `README.md` / `README_zh.md` / `mcp-client-example.json` / `pyproject.toml` 中均无 `pubchempy-mcp-server` / `pubchempy_mcp_server` 残留；
+- `.venv/Lib/site-packages`：存在 `pubchempy-1.0.5.dist-info`、`pubchempy.py`、`unichemicals_mcp_server-1.0.0.dist-info`，旧 dist-info 已清除；
+- 导入验证：`venv mcp 1.29.0`、`venv pubchempy 1.0.5` 正常；
+- `uv.lock`：根包为 `unichemicals-mcp-server`，依赖 `pubchempy>=1.0.5` 保留。
+
+### 遇到的问题及解决方案
+- dist 中实际残留的旧名产物为 1.0.0（0.1.1/0.2.0/0.3.0 已被此前的构建清理），按「旧包名产物」统一清理，范围与用户确认一致。
+
+### 下一步计划
+- 可选（用户决定）：是否在 PyPI 下架旧包 `pubchempy-mcp-server`（0.3.0）；README 中「基于 PubChemPy 构建」定位描述是否调整（未答复，默认保留）。

@@ -778,6 +778,49 @@ uvx --refresh unichemicals-mcp-server
 - `uv publish` 需要 PyPI 凭据与用户授权，未授权不得执行；
 - 已配置旧包名的客户端需更新配置后才可接入新包。
 
+### 步骤 20：unichemicals 调用一致性收口复核
+
+#### 目标说明
+收尾阶段确认所有面向调用方的文件都以 `unichemicals-mcp-server` 为准，无旧调用名残留；用户已确认所指配置文件为 `mcp-client-example.json`。
+
+#### 具体操作
+1. 全量核对调用名（预期无结果，依赖 `pubchempy>=1.0.5` 除外）：
+   ```powershell
+   rg -n -i "pubchempy-mcp-server|pubchempy_mcp_server" README.md README_zh.md mcp-client-example.json pyproject.toml
+   ```
+2. 确认 `mcp-client-example.json` 中 `uvx --refresh` 参数为 `unichemicals-mcp-server`，JSON 可正常解析。
+
+#### 验证方法
+- 上述 grep 无旧调用名残留；
+- `ConvertFrom-Json mcp-client-example.json` 解析成功。
+
+#### 风险提示
+- README 中「基于 PubChemPy 构建 / 致谢」是对第三方库 PubChemPy 的技术说明，不属于调用名，保留不误删。
+
+### 步骤 21：清理本地 dist 旧构建产物并校验第三方依赖
+
+#### 目标说明
+删除本地 `dist/` 下旧包名 `pubchempy_mcp_server-*` 的构建产物（已不入库，仅本地清理），并验证第三方依赖 `pubchempy` 完好可用。
+
+#### 具体操作
+1. 列出 dist 内容：`Get-ChildItem dist`。
+2. 删除旧包名产物（勿误删 `unichemicals_mcp_server-*`）：
+   ```powershell
+   Remove-Item -LiteralPath 'dist\pubchempy_mcp_server-1.0.0-py3-none-any.whl' -Force
+   Remove-Item -LiteralPath 'dist\pubchempy_mcp_server-1.0.0.tar.gz' -Force
+   ```
+3. `uv sync` 同步虚拟环境，卸载旧包名 `pubchempy-mcp-server` 的残留元数据。
+4. 校验依赖：`pyproject.toml` 保留 `pubchempy>=1.0.5`；`.venv` 中 `pubchempy 1.0.5` 可正常导入。
+
+#### 验证方法
+- `dist/` 仅剩 `unichemicals_mcp_server-1.0.0.*`；
+- `.venv/Lib/site-packages` 无 `pubchempy_mcp_server-*.dist-info`，存在 `pubchempy-1.0.5.dist-info` 与 `pubchempy.py`；
+- `import pubchempy` 成功（版本 1.0.5）。
+
+#### 风险提示
+- 不得删除第三方依赖 `pubchempy`（PubChem 数据源依赖，删除会导致 40 个 `pubchem_*` 工具失效）；
+- 本地清理不影响 PyPI 上的旧包 `pubchempy-mcp-server`（0.3.0），是否下架由用户在 PyPI 操作。
+
 ## v1.1.0 Q&A 记录（改名版）
 
 **Q：** 用户写的 `unichemicals_mcpserver` 和 `unichemicals-mcp-server` 是同一个名字吗？
