@@ -1,49 +1,50 @@
 # 项目目标文档
 
 ## 项目愿景
-将 pubchempy-mcp-server 整理成一个结构清晰、可正常打包发布、工具语义化命名，并覆盖更丰富 PubChem 数据类型（3D 结构/光谱/描述符等）的 MCP 服务器。
+将 UniChemicals MCP Server 发展为多数据库化学查询的统一 MCP 服务：v1.0.0 在保留 PubChem 能力的基础上，接入 SciFinder（CAS）官方 API 的化学查询能力（API key 鉴权），最终形成 `src/pubchem` 与 `src/cas` 双包结构。
 
 ## 背景与动机
-用户希望对 pubchempy-mcp-server（基于 PubChemPy 的 MCP 服务器）的源码进行整理，并增加新功能。现状痛点：单文件结构导致工具高度重复、打包配置与源码目录不一致导致无法正常构建、现有工具族覆盖不足。
+v0.3.0 已完成 PubChemPy 能力的重构与扩展（语义化命名、3D 结构/光谱/描述符等）。用户希望启动 v1.0.0 开发：将 SciFinder 的化学查询功能加入本项目，查询需通过 API key 鉴权；测试 key 已放入 `.env` 的 `CAS_COMMON_CHEMISTRY_API_KEY`。同时要求以 `reference-projects` 下两个官方参考项目（CAS-Integration-API、scifinder-api）为示例，挖掘该 API key 能实现的全部功能并接入 MCP server；最终交付结构为 `src` 下存在 `pubchem` 与 `cas` 两个包（需评估 `pubchem_mcp_server` 重命名带来的影响）。
 
 ## 核心目标
-1. 修正打包配置，使项目能够正常构建（`uv build`）并可发布。
-2. 重构代码结构，消除工具函数的高度重复，提升可维护性。
-3. 补充现有工具族（如批量查询等能力）。
-4. 新增 3D 结构（conformer）、光谱、描述符等数据类型工具。
-5. MCP 工具采用语义化命名：`{数据库}_{动作}_{实体}_by_{标识符}`（例：`pubchem_search_compound_by_cid`），并为未来接入其他数据库预留扩展空间。
-6. 尽可能挖掘 PubChemPy 包自身已具备但尚未暴露的功能，补充进工具集。
+1. 以 `reference-projects` 两个官方参考项目为依据，挖掘 SciFinder/CAS 官方 API 通过 API key 可实现的全部化学查询功能。
+2. 新增 `cas` 包，将上述能力封装为语义化 MCP 工具（沿用 `{数据库}_{动作}_{实体}_by_{标识符}` 命名规范，数据库前缀为 `cas`），鉴权从 `.env` 的 `CAS_COMMON_CHEMISTRY_API_KEY` 读取。
+3. 完成目录重组：`src` 下形成 `pubchem`（由 `pubchem_mcp_server` 重命名）与 `cas` 两个包，并全面处理重命名对 pyproject 入口、hatch 打包路径、import 语句、文档与既有脚本引用造成的影响。
+4. 版本升至 v1.0.0，构建（`uv build`）、本地 MCP 启动验证与文档（README / README_zh）同步更新。
+5. API key 安全处理：仅通过环境变量/.env 注入，不硬编码、不进入提交内容，任何输出不得泄露 key 值。
 
 ## 目标用户
-需要查询化学数据的 AI 助手用户与开发者（通过 MCP 客户端接入），以及 PyPI 上使用该 MCP 服务器的社区用户。
+需要同时查询 PubChem 与 SciFinder/CAS 化学数据的 AI 助手用户与开发者（通过 MCP 客户端接入），以及希望用统一 MCP 服务完成化学检索的科研、研发人员。
 
 ## 期望成果
-公开发布到 PyPI，可通过 `uvx` 一键运行；功能覆盖 PubChemPy 可用的主要查询能力（含 3D/光谱/描述符等），工具命名语义化且可扩展。
+v1.0.0 交付：MCP server 同时提供 `pubchem` 与 `cas` 两族工具；`cas` 工具覆盖官方参考项目所能演示的 API 查询能力；项目可正常构建并被 MCP 客户端调用；API key 通过 `.env` 安全注入。
 
 ## 成功标准
-- 项目可通过 `uv build` 成功构建。
-- 基于 `uvx` 的远程 MCP 服务能够跑通（可被 MCP 客户端正常调用）。
-- 时间无紧迫要求（慢慢来）。
+- `src` 下存在 `pubchem` 与 `cas` 两个包，`pubchem_mcp_server` 重命名影响已全部处理（构建、入口、import、文档、脚本均可正常工作）。
+- `cas` 工具族覆盖 `reference-projects` 两个官方示例（CAS-Integration-API、scifinder-api）所能演示的 API 能力，且使用 `.env` 的 `CAS_COMMON_CHEMISTRY_API_KEY` 鉴权调用成功。
+- 项目 `uv build` 成功；MCP server 可本地启动并被客户端调用，`pubchem` 与 `cas` 工具均可见可用。
+- 版本号与文档（README / README_zh）更新至 v1.0.0；API key 未出现在任何提交文件或日志中。
 
 ## 范围界定
 ### 包含
-- 打包配置修正
-- 代码结构整理/重构
-- 现有工具族补充
-- 新增 3D 结构 / 光谱 / 描述符类工具
-- MCP 工具语义化命名
-- 挖掘 PubChemPy 全部可用能力并暴露为工具
+- SciFinder/CAS 官方 API 能力挖掘（以 `reference-projects` 两个官方项目为权威示例，含 Substance / Document / Markush 等模块，具体以参考项目为准）
+- `cas` 包实现与 MCP 工具封装（API key 鉴权）
+- `src` 目录重组为 `pubchem` + `cas`（`pubchem_mcp_server` → `pubchem` 重命名及其影响处理）
+- 构建、测试、文档与版本升级至 v1.0.0
+- API key 安全实践（`.env` 读取、gitignore、不泄露）
 
 ### 排除
-- 下载类工具：现有 6 个 `download_by_*` 工具全部移除，且不新增。
+- 超出 CAS 官方 API 能力范围的自研查询功能
+- 与化学查询无关的功能
+- 移除既有 PubChem 能力（v0.3.0 能力保留并随重命名迁移至 `src/pubchem`）
 
 ## 约束条件
-- 不做下载工具（现有 `download_by_*` 全部移除）。
-- MCP 工具采用语义化命名：`{数据库}_{动作}_{实体}_by_{标识符}`（例：`pubchem_search_compound_by_cid`）。
-- 命名需为未来接入其他数据库（如 ChEMBL、DrugBank 等）留出扩展空间。
-- 公开发布到 PyPI。
-- 许可证：AGPL-3.0 + 商业使用限制附加条款（具传染性；商用需单独授权，即"无授权禁止商用"）。若后续更倾向 GPL-3.0 主许可证，可在规划阶段调整，不影响目标结构。
-- 时间无紧迫要求。
+- 测试 API key 仅存于 `.env` 的 `CAS_COMMON_CHEMISTRY_API_KEY`；任何文档、对话、提交与日志都不得泄露 key 值。
+- `reference-projects` 仅作官方示例参考，尊重其许可证与版权，不整体复制其代码；引用其能力清单时需在规划阶段做许可证兼容性评估。
+- 保留用户既有改动（如 `.gitignore` 未提交修改）与 v0.3.0 已有功能。
+- MCP 工具沿用语义化命名规范（数据库前缀区分 `pubchem` / `cas`）。
+- 最终结构必须是 `src/pubchem` 与 `src/cas` 并存。
+- 时间无紧迫要求，但功能挖掘需以官方参考项目为准，保证覆盖面。
 
 ## 澄清问答记录
 <!-- GOAL-QA-LOG-START -->
@@ -141,9 +142,33 @@
   - 约束条件
 <!-- GOAL-QA-R005-END -->
 
+### QA-R006：v1.0.0 接入 SciFinder/CAS 查询的目标、范围与结构
+<!-- GOAL-QA-R006-START -->
+- **提问时间**：2026-08-08 13:22
+- **提问目的**：用户提出 v1.0.0 开发需求（接入 SciFinder 化学查询功能，API key 鉴权），其中"挖掘该 API key 能实现的全部功能"范围较宽，且涉及目录重命名，需要将成果、功能范围、结构要求与安全约束固化为可实施目标。
+- **问题列表**
+  1. v1.0.0 的核心交付物是什么？（新增 SciFinder/CAS 查询工具集并重组为 pubchem + cas 双包结构）
+  2. `cas` 功能范围如何界定？（以两个官方参考项目为据，挖掘 API key 可实现的全部功能）
+  3. 目录结构与重命名影响如何处理？（`src/pubchem` + `src/cas`；`pubchem_mcp_server` 重命名为 `pubchem` 对构建/入口/import/文档的影响）
+  4. 鉴权与凭据安全约束？（测试 key 在 `.env` 的 `CAS_COMMON_CHEMISTRY_API_KEY` 下）
+- **用户回答**
+  1. 对项目进行 v1.0.0 开发，将 SciFinder 的化学查询功能加入本 MCP server，查询需通过 API key。
+  2. 通过两个官方参考项目 `reference-projects` 的示例，挖掘该 API key 能实现的全部功能并加入。
+  3. 最终交付结构为 `src` 下存在 `pubchem` 与 `cas` 两个文件夹；需要考虑 `pubchem_mcp_server` 重命名可能带来的影响。
+  4. 测试用 key 已放在 `.env` 文件夹的 `CAS_COMMON_CHEMISTRY_API_KEY` 下。
+- **提炼结论**
+  - v1.0.0 = 在现有 PubChem MCP server 基础上接入 CAS/SciFinder 官方 API 化学查询能力，形成多数据库查询服务。
+  - `cas` 功能清单以官方参考项目为准全量挖掘：CAS-Integration-API（Substance / Document / Markush 等模块）与 scifinder-api（tutorials / sample-code）。
+  - 目标结构确定为 `src/pubchem` 与 `src/cas`；`pubchem` 由 `pubchem_mcp_server` 重命名而来，重命名影响（pyproject 入口、hatch packages、import、文档、既有脚本）纳入 v1.0.0 范围。
+  - 凭据安全：仅引用键名 `CAS_COMMON_CHEMISTRY_API_KEY`，任何输出不得泄露 key 值。
+  - 待确认点（不阻塞目标交付）：`cas` 工具命名是否严格沿用 pubchem 的语义化规范；API key 的有效期/限流未知；参考项目许可证与本项目许可证（AGPL-3.0 + 商业使用限制）的兼容性需在规划阶段评估。
+- **影响的目标文档章节**
+  - 核心目标 / 期望成果 / 成功标准 / 范围界定 / 约束条件
+<!-- GOAL-QA-R006-END -->
+
 <!-- GOAL-QA-LOG-END -->
 
 ## 备注
-- 已有上下文（源自 project-docs/teach.md，可读取）：项目为 PubChemPy MCP 服务器，仅一个代码文件 `src/pubchempy_mcpserver/server.py`，工具函数高度重复。
-- 已发现的问题：`pyproject.toml` 打包入口与包路径写的是 `pubchem_mcp_server`，但实际源码目录是 `pubchempy_mcpserver`，按当前配置构建 wheel 大概率失败。
-- 目标澄清已完成（QA-R001 ~ QA-R005），用户确认无其他目标；可进入 project-planner-cn 规划阶段。
+- 本文档主章节自 2026-08-08 起反映 v1.0.0 目标（QA-R006）；v0.3.0 周期的目标内容保留在「澄清问答记录」QA-R001 ~ QA-R005 历史中。
+- 参考项目位置：`reference-projects/CAS-Integration-API-main/CAS-Integration-API-main`（Python）与 `reference-projects/scifinder-api-main/scifinder-api-main`（JS/TS 官方示例），均已加入 .gitignore。
+- 下一步建议调用 **project-planner-cn** agent 进行 v1.0.0 的实现规划。
