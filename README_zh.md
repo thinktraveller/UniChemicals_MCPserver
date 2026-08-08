@@ -1,4 +1,4 @@
-# PubChem MCP Server
+# UniChemicals MCP Server
 
 [![PyPI version](https://badge.fury.io/py/pubchempy-mcp-server.svg)](https://badge.fury.io/py/pubchempy-mcp-server)
 
@@ -6,21 +6,33 @@
 
 ## 🔬 项目简介
 
-这是一个基于 `PubChemPy` 构建的 [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) 服务器，专为连接 PubChem 数据库（全球最大的免费化学信息数据库）而设计。
+这是一个多数据库化学查询的 [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) 服务器，同时连接 **PubChem**（基于 `PubChemPy`）与 **CAS Common Chemistry**（官方 API，API key 鉴权）。
 
 **它的作用是什么？**
-这个服务器相当于 AI 助手（如 Claude, Cursor, Trae）与 PubChem 数据库之间的桥梁。通过集成该 MCP 服务器，你的 AI 助手将获得自主搜索、提取和分析数以百万计的化学化合物、物质和生物测定数据的能力，这一切都可以在你的对话框或开发环境中直接完成。
+这个服务器相当于 AI 助手（如 Claude, Cursor, Trae）与公共化学数据库之间的桥梁。通过集成该 MCP 服务器，你的 AI 助手将能自主搜索、提取和分析来自 PubChem（海量免费化学记录）与 CAS Common Chemistry（物质摘要、完整详情、性质与 molfile）的化学数据。
 
 **为什么要使用它？**
-与其手动在 PubChem 网站上搜索分子式、分子量、结构代码（SMILES/InChI）、同义词或 3D 构象，不如直接把任务交给 AI。AI 可以调用这里提供的工具来查询数据库，并为多种化学物质批量获取属性。
+与其手动在 PubChem 或 CAS 网站上搜索分子式、分子量、结构代码（SMILES/InChI）、同义词、3D 构象或 molfile，不如直接把任务交给 AI。
 
-> **数据来源：** 所有数据均实时来自 PubChem 官方 REST 服务（PUG REST / PUG-View）。本服务器不保存任何本地缓存或数据库。
+> **数据来源：** PubChem 数据实时来自 PubChem 官方 REST 服务（PUG REST / PUG-View）；CAS 数据来自 CAS Common Chemistry API（`https://commonchemistry.cas.org/api`）。本服务器不保存任何本地缓存或数据库。
 
 ---
 
 ## 🚀 安装与配置
 
 无需繁琐的安装过程，你可以通过 `uvx` 直接运行此服务器。
+
+### CAS Common Chemistry API key（`cas_*` 工具必需）
+
+使用 `cas_*` 工具需要 CAS Common Chemistry API 令牌。请在启动服务器的目录下创建 `.env` 文件（或在环境中导出该变量）：
+
+```env
+CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
+```
+
+模板见 `.env.example`。PubChem 工具（`pubchem_*`）不需要任何 key。
+
+### MCP 客户端配置
 
 在你的 MCP 客户端配置文件（如 `claude_desktop_config.json`）中添加以下内容：
 
@@ -44,7 +56,38 @@
 
 ## 🛠️ 可用工具列表 (API 参考)
 
-本服务器提供 **40 个语义化工具**，每个工具按 `pubchem_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
+本服务器提供 **51 个语义化工具**——40 个 `pubchem_*` 工具与 11 个 `cas_*` 工具，每个工具按 `{数据库}_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem` / `cas`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
+
+### CAS Common Chemistry 工具（`cas_*`）
+
+基于官方 CAS Common Chemistry API（`/search`、`/detail`、`/export`），使用 `X-Api-Key` 请求头鉴权。
+
+#### 物质搜索（`cas_search_substance_by_*`）
+
+所有搜索工具共用 `/search` 端点；均支持 `offset`（默认 0）与 `size`（1~100，默认 10）分页参数。搜索不区分大小写。
+
+- `cas_search_substance_by_name`：按名称搜索，支持尾部通配符（如 `car*`）。
+- `cas_search_substance_by_casrn`：按 CAS 登记号（带或不带连字符，如 `50-00-0`）。
+- `cas_search_substance_by_smiles`：按 SMILES（canonical 或 isomeric）。
+- `cas_search_substance_by_inchi`：按 InChI（带或不带 `InChI=` 前缀）。
+- `cas_search_substance_by_inchikey`：按 InChIKey（自动补充 `InChIKey=` 前缀——实测该前缀必需）。
+
+#### 物质详情（`cas_get_substance_by_*`）
+
+- `cas_get_substance_by_casrn`：按 CAS 登记号获取完整详情（URI、名称、InChI/InChIKey、canonical SMILES、分子式/分子量、实验性质与引用、同义词、被替代 RN、SVG 结构图）。
+- `cas_get_substance_by_uri`：按 API 返回的精确 `uri` 获取同样详情（如 `substance/pt/50000`）。
+
+#### molfile 导出（`cas_get_molfile_by_*`）
+
+- `cas_get_molfile_by_uri`：按 URI 直接导出 V2000 molfile 文本（`/export`）。
+- `cas_get_molfile_by_casrn`：便捷封装——先经 `/detail` 解析 URI，再导出 molfile。
+
+#### 便捷提取工具（`cas_get_*_by_casrn`）
+
+- `cas_get_properties_by_casrn`：从 `/detail` 提取实验性质与性质引用。
+- `cas_get_image_by_casrn`：从 `/detail` 提取结构图（SVG）。
+
+> **数据政策：** CAS Common Chemistry 数据由 CAS（美国化学会）按自身条款提供，访问条件见 [CAS Common Chemistry 官网](https://www.cas.org/services/commonchemistry-api)。本服务器仅反映你的 key 可调用的 API 能力。
 
 ### 1. 化合物搜索 (`pubchem_search_compound_by_*`)
 从 PubChem 数据库中检索经过标准化的化合物记录。

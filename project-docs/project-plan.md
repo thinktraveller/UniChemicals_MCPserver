@@ -430,7 +430,7 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 ### 步骤 9：`src/pubchem_mcp_server` → `src/pubchem` 重命名与影响面处理
 
 #### 目标说明
-交付结构要求 `src` 下仅有 `pubchem` 与 `cas` 两个包。本步骤把现包 `pubchem_mcp_server` 重命名为 `pubchem` 并处理全部引用面，保证 v0.3.0 的 41 个 `pubchem_*` 工具行为不变、构建与启动正常。
+交付结构要求 `src` 下仅有 `pubchem` 与 `cas` 两个包。本步骤把现包 `pubchem_mcp_server` 重命名为 `pubchem` 并处理全部引用面，保证 v0.3.0 的 40 个 `pubchem_*` 工具行为不变、构建与启动正常。
 
 #### 具体操作
 1. 目录重命名（保留历史）：
@@ -567,11 +567,11 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 4. `README.md` / `README_zh.md`：
    - 新增「CAS / SciFinder 化学查询」章节：环境变量 `CAS_COMMON_CHEMISTRY_API_KEY`、`.env.example` 配置示例、11 个 `cas_*` 工具清单、数据来源（CAS Common Chemistry）、频率与限流提示；
    - 许可证与归属章节：参考项目（CAS-Integration-API / scifinder-api，Apache-2.0）仅作接口参考，不得整体复制代码并保留署名；CAS Common Chemistry 数据的使用条款以官方页面为准，README 声明数据归属（预期含非商业限制，步骤 8 一并核实官方页面条款）；
-   - 工具总数（41 个 `pubchem_*` + 11 个 `cas_*`）与示例命令更新。
+   - 工具总数（40 个 `pubchem_*` + 11 个 `cas_*`）与示例命令更新。
 
 #### 验证方法
 - `uv build` 通过，wheel 同时包含 `pubchem` 与 `cas` 两个包；
-- MCP 握手 `tools/list` 同时出现 41 个 `pubchem_*` 与 11 个 `cas_*` 工具，数量与命名和文档一致；
+- MCP 握手 `tools/list` 同时出现 40 个 `pubchem_*` 与 11 个 `cas_*` 工具，数量与命名和文档一致；
 - 版本号在 `pyproject.toml`、README、wheel 元数据中均为 1.0.0；
 - 全文检索不到真实 key 值；`.env.example` 只含占位符。
 

@@ -1,5 +1,65 @@
 # 构建日志
 
+## [2026-08-08] v1.0.0 构建记录（步骤 8–13：CAS Common Chemistry 接入）
+
+### 步骤 8：官方文档核对与 API 只读探测
+
+#### 执行的任务
+- 通读用户提供的官方文档 `reference-projects/CAS 常用化学 --- CAS Common Chemistry (2026_8_8 13：49：16).html`（OAS 2.0 页面），固化三端点规格：`GET /search`（q/offset/size）、`GET /detail`（cas_rn 或 uri）、`GET /export`（uri/returnAsAttachment），鉴权头 `X-Api-Key`，Base URL `https://commonchemistry.cas.org/api`。
+- 使用 `.env` 中测试 key 做 5 轮只读 GET 探测（探测脚本仅本地运行于 `%TEMP%`，未入库；全程未输出 key 值）。
+
+#### 实测结论（与官方文档的差异，已作为实现依据）
+| 项目 | 官方文档描述 | 实测行为 |
+|---|---|---|
+| `/search` 结果字段 | `results[].image` | 实际为 `results[].images`（SVG 字符串数组，通常 1 个） |
+| `/search` 的 `count` | 字符串 | 实际为整数 |
+| InChIKey 搜索 | 文档称支持 | 实测**必须带 `InChIKey=` 前缀**，裸 InChIKey 返回 0 结果；工具层已自动补前缀 |
+| InChI 搜索 | 带/不带 `InChI=` 均可 | 实测两种形式均可（工具层不做强制转换） |
+| `/detail.inchiKey` | 裸 InChIKey | 实际带 `InChIKey=` 前缀 |
+| `/detail.smile` | 字段存在 | 实测多为空串，`canonicalSmile` 有值 |
+| `/detail.molecularFormula` / 名称 | 纯文本 | 实际含 HTML 标记（`<sub>`、`<em>`），工具层已剥离 |
+| `/detail` 额外字段 | 文档未列 | `hasMolfile`（布尔）、`images`（SVG 数组） |
+| `/export` URI | 文档示例 `substance/pt/50000` | 必须使用 `/detail` 返回的精确 uri（水为 `substance/pt/7732185`），自行拼接会 404 |
+| 分页上限 | 每页最多 100 | 实测 `size=500` 仍返回 100；`size=0` 返回空 results（HTTP 200）；`size<0` 触发 500 |
+| 鉴权 | `X-Api-Key` | 大小写不敏感（`X-API-KEY` 亦有效）；无 key 或错误 key 返回 403 `{"message": "API key required..."}` |
+| 错误码 | 400/404/500 | 实测一致；404 返回 `{"message": "Detail not found"}`，400 为 `Missing required parameter: q` |
+
+- key 有效性：测试 key 有效（40 字符），三端点全部调用成功，无 401/403/429。
+
+### 步骤 9：`src/pubchem_mcp_server` → `src/pubchem` 重命名
+
+- `git mv src/pubchem_mcp_server src/pubchem`，全仓引用核对：包内均为相对导入，无绝对导入残留；`pyproject.toml` 入口更新为 `pubchem.server:main`、hatch packages 更新为 `["src/pubchem", "src/cas"]`；`client.py` 的 PUG-View User-Agent 更新为 `unichemicals-mcp-server/1.0`。
+- 工具数量校正：v0.3.0 最终验收实际为 **40** 个 `pubchem_*` 工具（开发期 buildlog 曾记 41，属早期计数误差），计划书已同步修正为 40。
+
+### 步骤 10：`cas` 包骨架与鉴权客户端
+
+- 新增 `src/cas/{__init__,client,utils,registry}.py`；`client.py` 封装 `.env` 读取（`CAS_COMMON_CHEMISTRY_API_KEY`）、`X-Api-Key` 注入、30s 超时、429/5xx 指数退避重试、错误归一化（400/403/404/429/5xx → 友好中文消息）。
+- `pyproject.toml` 新增依赖 `python-dotenv>=1.0`，版本升至 `1.0.0`。
+- 未配置 key 时返回明确 `Error: 环境变量 CAS_COMMON_CHEMISTRY_API_KEY 未配置...`，不打印 key 值。
+
+### 步骤 11：`cas` 工具实现与注册（11 个工具）
+
+- 5 个搜索（共用 `/search`）：`cas_search_substance_by_name`（尾部通配符）、`by_casrn`、`by_smiles`、`by_inchi`、`by_inchikey`（自动补前缀）；均含 offset/size 校验（size 1~100）。
+- 2 个详情：`cas_get_substance_by_casrn`、`cas_get_substance_by_uri`。
+- 2 个 molfile：`cas_get_molfile_by_uri`（直取 `/export`）、`cas_get_molfile_by_casrn`（detail→uri→export 两段封装，hasMolfile=false 时友好报错）。
+- 2 个便捷提取：`cas_get_properties_by_casrn`、`cas_get_image_by_casrn`。
+- MCP 工具层真实调用验证：11/11 全部成功（甲醛 50-00-0、水 7732-18-5 molfile、InChIKey/InChI/SMILES/名称搜索、404 友好错误）；pubchem 工具无回归。
+
+### 步骤 12：双库统一注册、版本 1.0.0、依赖与文档
+
+- `server.py` 双库注册（pubchem 40 + cas 11 = 51），服务名改为 `UniChemicals_MCP_Server`。
+- 新增 `.env.example`（仅占位符）；README.md / README_zh.md 新增 CAS 章节（配置、11 工具清单、数据政策），工具总数更新为 51。
+
+### 步骤 13：端到端验收与安全审计
+
+- `uv build` 成功：`dist/pubchempy_mcp_server-1.0.0-py3-none-any.whl` + `.tar.gz`；wheel 含 `pubchem/server.py` 与 `cas/{client,registry}.py`；entry point = `pubchem.server:main`；METADATA Version 1.0.0、License AGPL-3.0-only、Requires-Dist 含 python-dotenv。
+- stdio MCP 握手：initialize → tools/list 返回 51 工具（40 pubchem + 11 cas），`serverInfo` = UniChemicals_MCP_Server。
+- 结构：`src` 下仅 `pubchem` 与 `cas` 两个目录。
+- 安全审计：`git grep` 无 key 值（仅键名与占位符）；`.env`、`reference-projects`、`dist`、`.venv` 均被 .gitignore 忽略未入库。
+- 遗留提示：测试 key 曾在早期探测输出中短暂出现（未入库、未进日志），建议使用后轮换。
+
+---
+
 ## [2026-08-06 23:15] 步骤 1 完成：修正打包配置并跑通 `uv build`
 
 ### 执行的任务

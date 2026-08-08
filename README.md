@@ -1,4 +1,4 @@
-# PubChem MCP Server
+# UniChemicals MCP Server
 
 [![PyPI version](https://badge.fury.io/py/pubchempy-mcp-server.svg)](https://badge.fury.io/py/pubchempy-mcp-server)
 
@@ -6,21 +6,33 @@
 
 ## 🔬 Introduction
 
-An [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) server for the PubChem database, powered by `PubChemPy`.
+An [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) server for multi-database chemistry queries, combining **PubChem** (via `PubChemPy`) and **CAS Common Chemistry** (official API, API-key authenticated).
 
 **What does it do?**
-This server acts as a bridge between AI assistants (like Claude, Cursor, Trae) and the PubChem database, which is the world's largest collection of freely accessible chemical information. By integrating this MCP server, your AI assistant gains the ability to autonomously search, retrieve, and analyze millions of chemical compounds, substances, and bioassays directly within your chat or development environment.
+This server acts as a bridge between AI assistants (like Claude, Cursor, Trae) and public chemistry databases. By integrating this MCP server, your AI assistant gains the ability to autonomously search, retrieve, and analyze chemical compounds from PubChem (millions of freely accessible records) and CAS Common Chemistry (substance summaries, full details, properties and molfiles) directly within your chat or development environment.
 
 **Why use it?**
-Instead of manually browsing the PubChem website to find molecular formulas, weights, structures (SMILES/InChI), synonyms or 3D conformers, you can simply ask your AI assistant. The AI can use the provided tools to query the database and batch retrieve properties for multiple chemicals.
+Instead of manually browsing PubChem or CAS websites to find molecular formulas, weights, structures (SMILES/InChI), synonyms, 3D conformers or molfiles, you can simply ask your AI assistant.
 
-> **Data source:** all data is fetched in real time from PubChem's official REST services (PUG REST / PUG-View). This server keeps no local cache or database.
+> **Data sources:** PubChem data is fetched in real time from PubChem's official REST services (PUG REST / PUG-View); CAS data is fetched from the CAS Common Chemistry API (`https://commonchemistry.cas.org/api`). This server keeps no local cache or database.
 
 ---
 
 ## 🚀 Installation & Configuration
 
 You can use this server directly via `uvx` without manual installation.
+
+### CAS Common Chemistry API key (required for `cas_*` tools)
+
+To use the `cas_*` tools you need a CAS Common Chemistry API token. Create a `.env` file in the directory you launch the server from (or export the variable in your environment):
+
+```env
+CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
+```
+
+See `.env.example` for the template. The PubChem tools (`pubchem_*`) do not require any key.
+
+### MCP client configuration
 
 Add the following to your MCP client configuration (e.g., `claude_desktop_config.json`):
 
@@ -44,7 +56,38 @@ Add the following to your MCP client configuration (e.g., `claude_desktop_config
 
 ## 🛠️ Available Tools (API Reference)
 
-This server exposes **40 semantic tools**, each named as `pubchem_{action}_{entity}_by_{identifier}` so the source database (`pubchem`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
+This server exposes **51 semantic tools** — 40 `pubchem_*` tools and 11 `cas_*` tools — each named as `{database}_{action}_{entity}_by_{identifier}` so the source database (`pubchem` / `cas`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
+
+### CAS Common Chemistry tools (`cas_*`)
+
+Powered by the official CAS Common Chemistry API (`/search`, `/detail`, `/export`), authenticated with `X-Api-Key`.
+
+#### Search substances (`cas_search_substance_by_*`)
+
+All search tools share the `/search` endpoint; each accepts `offset` (default 0) and `size` (1–100, default 10) for pagination. Searches are case-insensitive.
+
+- `cas_search_substance_by_name`: name search, supports a trailing wildcard (e.g. `car*`).
+- `cas_search_substance_by_casrn`: CAS Registry Number (with or without dashes, e.g. `50-00-0`).
+- `cas_search_substance_by_smiles`: SMILES (canonical or isomeric).
+- `cas_search_substance_by_inchi`: InChI (with or without the `InChI=` prefix).
+- `cas_search_substance_by_inchikey`: InChIKey (the `InChIKey=` prefix is added automatically — required by the API in practice).
+
+#### Substance details (`cas_get_substance_by_*`)
+
+- `cas_get_substance_by_casrn`: full details by CAS RN (URI, names, InChI/InChIKey, canonical SMILES, molecular formula/mass, experimental properties + citations, synonyms, replaced RNs, SVG images).
+- `cas_get_substance_by_uri`: same details by the exact `uri` returned by the API (e.g. `substance/pt/50000`).
+
+#### Molfile export (`cas_get_molfile_by_*`)
+
+- `cas_get_molfile_by_uri`: V2000 molfile text by URI (`/export`).
+- `cas_get_molfile_by_casrn`: convenience — resolves the URI via `/detail` first, then exports the molfile.
+
+#### Convenience extractors (`cas_get_*_by_casrn`)
+
+- `cas_get_properties_by_casrn`: experimental properties and property citations extracted from `/detail`.
+- `cas_get_image_by_casrn`: structure images (SVG) extracted from `/detail`.
+
+> **Data policy:** CAS Common Chemistry data is provided by CAS (American Chemical Society) under its own terms; see the [CAS Common Chemistry website](https://www.cas.org/services/commonchemistry-api) for access conditions. This server only reflects API capabilities available with your key.
 
 ### 1. Compound Search (`pubchem_search_compound_by_*`)
 Retrieve standardized compound records from the PubChem database.
