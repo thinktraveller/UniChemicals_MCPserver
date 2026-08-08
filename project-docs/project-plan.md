@@ -1,5 +1,7 @@
 # pubchempy-mcp-server 构建计划书
 
+> **版本状态**：v0.3.0 计划（步骤 1–7）已于 2026-08-08 完成并发布（提交 e44ecca / 39c0d74 验收通过）。自 2026-08-08 起，本文档新增 **v1.0.0 计划（步骤 8–13）**，其功能设计以 CAS Common Chemistry **官方 API 文档**为唯一权威依据（见步骤 8），参考项目仅作工具面与命名参考。
+
 ## 项目概述
 
 - **项目目标**：对 pubchempy-mcp-server 进行源码整理与功能扩展，使其结构清晰、可正常打包发布、工具语义化命名，并覆盖更丰富的 PubChem 数据类型（3D 结构/光谱/描述符等）。完整目标与澄清过程见 `project-docs/goal.md`（QA-R001 ~ QA-R005）。
@@ -325,3 +327,298 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 
 **Q：** 光谱数据为什么不用 PubChemPy？
 **A：** PubChemPy 未封装光谱接口（已核实其官方文档无 spectrum 支持）；光谱数据由 PubChem PUG-View 服务提供，需用 `requests` 直连。3D 结构则不同，PubChemPy 原生支持 `record_type='3d'`，无需直连。
+
+---
+
+# v1.0.0 构建计划（基于 CAS Common Chemistry 官方文档）
+
+## v1.0.0 项目概述
+
+- **项目目标**：在 v0.3.0 完成的 PubChem MCP server 基础上接入 CAS/SciFinder 官方化学查询能力，形成 `pubchem` + `cas` 双数据库 MCP 服务；最终交付结构为 `src` 下仅有 `pubchem` 与 `cas` 两个包（`pubchem_mcp_server` 重命名为 `pubchem`）。完整目标与澄清见 `project-docs/goal.md` QA-R006。
+- **功能设计依据（本次重设计要点）**：用户提供官方 API 文档 `reference-projects/CAS 常用化学 --- CAS Common Chemistry (2026_8_8 13：49：16).html`，明确测试 key（`CAS_COMMON_CHEMISTRY_API_KEY`）对应的是 **CAS Common Chemistry API**。官方文档定义该 key 可调用的全部能力为三个端点（Search / Detail / Export），本计划的功能范围、参数与响应结构**全部以该文档为准**。
+- **参考项目定位（降级为参考）**：`reference-projects` 两个项目演示的是另外两套鉴权体系——CAS-Integration-API（`helium.cas.org`，OAuth2 client credentials）与 scifinder-api（`scifinder-n.cas.org`，OAuth2 授权码 + PKCE）。两者均**无法用本 key 调用**，故不作为功能来源，仅作为工具面设计（命名、参数风格、返回结构）与未来 Tier B 扩展的参考。
+
+### v1.0.0 成功标准（与 goal.md QA-R006 一致）
+- `src` 下仅有 `pubchem` 与 `cas` 两个包；`uv build` 通过；
+- `cas_*` 工具覆盖官方文档三端点全部能力，且可被 MCP 客户端调用；
+- 版本升至 1.0.0；README/README_zh 与工具清单一致；
+- key 值不出现于任何文件、日志、提交与构建产物中。
+
+## 官方文档端点规格（已核对，作为实现依据）
+
+> 来源：`reference-projects/CAS 常用化学 --- CAS Common Chemistry (2026_8_8 13：49：16).html`（CAS Common Chemistry API 概览，OAS 2.0）。
+
+- **Base URL**：`https://commonchemistry.cas.org/api`
+- **鉴权**：请求头 `X-Api-Key`（值为注册后获得的 API token；Swagger 示例 cURL 写作 `X-API-KEY`，HTTP 头名大小写不敏感，但实现与探测统一采用文档正文的 `X-Api-Key`，以实测为准）。
+
+| 端点 | 方法 | 参数 | 成功响应 | 错误码 |
+|---|---|---|---|---|
+| `/search` | GET | `q`（必填）：CAS RN（带/不带连字符）、SMILES（canonical/isomeric）、InChI（带/不带 `InChI=` 前缀）、InChIKey、名称（支持尾部通配符如 `car*`，不区分大小写）；`offset`、`size`（分页，每页最多 100；Swagger 中类型标注为 string，实际按数值传递，实测确认） | 200 `application/json`：`{"count": "<string>", "results": [{"rn", "name", "image"(SVG)}]}` | 400 / 500 |
+| `/detail` | GET | `cas_rn` 或 `uri`（二选一） | 200 `application/json`：`uri`、`rn`、`name`、`image`(SVG)、`inchi`、`inchiKey`、`smile`、`canonicalSmile`、`molecularFormula`、`molecularMass`、`experimentalProperties[]`（name/property/sourceNumber）、`propertyCitations[]`（docUri/sourceNumber/source）、`synonyms[]`、`replacedRns[]` | 404 / 500 |
+| `/export` | GET | `uri`（必填）、`returnAsAttachment`（boolean，默认 false） | 200 `text/plain`：molfile（V2000 文本，含物质名/分子式/RN/版权行） | 404 / 500 |
+
+- 与旧计划的关键差异（旧 v1.0.0 计划已作废，本版为准）：`/search` 参数为 `q` + `offset` + `size`（**无** `match`/`length` 参数，名称模糊检索靠 `q` 尾部通配符实现）；`/export` 参数为 `uri` + `returnAsAttachment`；错误码为 400/404/500；`count` 为字符串。
+
+## 工具映射表（端点 → 工具）
+
+| 工具名 | 参数 | 底层端点 | 说明 |
+|---|---|---|---|
+| `cas_search_substance_by_name` | name, offset=0, size=10 | `GET /search?q={name}` | 支持尾部通配符（`car*`）、不区分大小写 |
+| `cas_search_substance_by_casrn` | cas_rn, offset=0, size=10 | `GET /search?q={cas_rn}` | RN 带或不带连字符均可 |
+| `cas_search_substance_by_smiles` | smiles, offset=0, size=10 | `GET /search?q={smiles}` | canonical / isomeric |
+| `cas_search_substance_by_inchi` | inchi, offset=0, size=10 | `GET /search?q={inchi}` | 带或不带 `InChI=` 前缀 |
+| `cas_search_substance_by_inchikey` | inchikey, offset=0, size=10 | `GET /search?q={inchikey}` | InChIKey 反查 |
+| `cas_get_substance_by_casrn` | cas_rn | `GET /detail?cas_rn=` | 完整详情（含性质/同义词/replacedRns） |
+| `cas_get_substance_by_uri` | uri | `GET /detail?uri=` | 完整详情（与上同构） |
+| `cas_get_molfile_by_uri` | uri, return_as_attachment=False | `GET /export?uri=` | 返回 molfile 文本 |
+| `cas_get_molfile_by_casrn` | cas_rn | 先 `GET /detail?cas_rn=` 取 uri，再 `GET /export?uri=` | 便捷两段封装 |
+| `cas_get_properties_by_casrn` | cas_rn | `GET /detail?cas_rn=` 提取 | 便捷提取 experimentalProperties + propertyCitations（非独立端点） |
+| `cas_get_image_by_casrn` | cas_rn | `GET /detail?cas_rn=` 提取 | 便捷提取 image SVG（非独立端点） |
+
+> 说明：前 5 个搜索工具共享同一个 `/search` 端点，仅 `q` 语义不同；沿用 pubchem 的 `{数据库}_{动作}_{实体}_by_{标识符}` 命名规范拆分为可发现工具，底层共用 `client.search()`。便捷提取工具（properties/image）不增加 API 调用面，仅改善 AI 消费体验。
+
+## 开发计划
+
+### 步骤 8：官方文档核对、能力盘点与 API 只读探测
+
+#### 目标说明
+以官方文档为唯一权威规格固化三端点规格（上表）；用 `.env` 中的测试 key 做只读探测，验证鉴权头、参数、分页与错误码的真实行为，产出「端点规格 + 工具映射表」并写入 buildlog。
+
+#### 具体操作
+1. 通读官方 HTML 文档，将端点规格、参数、响应结构与错误码固化为文档表格（即本章节规格表），与官方文档逐条核对，无臆造端点/参数。
+2. 只读探测（本地临时脚本，**不入库**）：
+   ```python
+   import os
+   import requests
+   from dotenv import load_dotenv
+
+   load_dotenv()
+   key = os.environ["CAS_COMMON_CHEMISTRY_API_KEY"]
+   headers = {"X-Api-Key": key, "Accept": "application/json"}
+   base = "https://commonchemistry.cas.org/api"
+   # 1) 名称搜索（含通配符）
+   requests.get(f"{base}/search", params={"q": "car*"}, headers=headers, timeout=30)
+   # 2) RN / SMILES / InChI / InChIKey 搜索
+   requests.get(f"{base}/search", params={"q": "50-00-0"}, headers=headers, timeout=30)
+   requests.get(f"{base}/search", params={"q": "C=O"}, headers=headers, timeout=30)
+   requests.get(f"{base}/search", params={"q": "InChI=1S/CH2O/c1-2/h1H2"}, headers=headers, timeout=30)
+   requests.get(f"{base}/search", params={"q": "InChIKey=WSFSSNUMVMOOMR-UHFFFAOYSA-N"}, headers=headers, timeout=30)
+   # 3) 分页：size=1 与 size=101（验证上限行为）、offset
+   requests.get(f"{base}/search", params={"q": "car*", "offset": 0, "size": 1}, headers=headers, timeout=30)
+   # 4) 详情：cas_rn 与 uri 两种取数
+   requests.get(f"{base}/detail", params={"cas_rn": "50-00-0"}, headers=headers, timeout=30)
+   requests.get(f"{base}/detail", params={"uri": "substance/pt/50000"}, headers=headers, timeout=30)
+   # 5) molfile 导出
+   requests.get(f"{base}/export", params={"uri": "substance/pt/50000"}, headers=headers, timeout=30)
+   # 6) 错误路径：不存在 RN（预期 404/400）、空 q（预期 400）
+   ```
+3. 记录真实响应码、字段名、`count` 类型、分页上限、鉴权头大小写敏感性；将**脱敏**后的响应样例与结论写入 `project-docs/buildlog.md`。
+4. 确认无 `match`/`length` 等臆造参数；若探测与文档有出入，以实测为准并在 buildlog 记录差异。
+5. 安全：探测脚本仅本地运行，不提交；任何输出、日志、提交不得出现 key 值。
+
+#### 验证方法
+- 三端点全部探测成功；规格表与官方文档逐条对应，无臆造端点/参数；
+- 明确回答「key 能打开哪个服务面」：仅 Common Chemistry 三端点；
+- 401/403/429 等异常有记录与处理结论；
+- key 值未出现在任何文件、日志、提交中。
+
+#### 风险提示
+- 调用 `commonchemistry.cas.org` 需要放行 HTTPS 网络（当前沙箱受限时需授权）；超时/限流（429）时采用退避重试，不当作代码错误；
+- 若 key 已失效（401/403），暂停并通知用户轮换 key，不继续后续步骤；
+- 鉴权头大小写、`size` 类型（Swagger 标注 string）等以实测为准。
+
+### 步骤 9：`src/pubchem_mcp_server` → `src/pubchem` 重命名与影响面处理
+
+#### 目标说明
+交付结构要求 `src` 下仅有 `pubchem` 与 `cas` 两个包。本步骤把现包 `pubchem_mcp_server` 重命名为 `pubchem` 并处理全部引用面，保证 v0.3.0 的 41 个 `pubchem_*` 工具行为不变、构建与启动正常。
+
+#### 具体操作
+1. 目录重命名（保留历史）：
+   ```powershell
+   git mv src/pubchem_mcp_server src/pubchem
+   ```
+2. 全仓引用面核对（以 `rg -n "pubchem_mcp_server"` 为准，排除 `reference-projects` / `.venv` / `dist` / `.git` / `.codex`）：
+   - `pyproject.toml`：`[project.scripts] pubchempy-mcp-server = "pubchem.server:main"`；`[tool.hatch.build.targets.wheel] packages = ["src/pubchem"]`；
+   - `src/pubchem/` 内部确认均为相对导入（v0.3.0 重构后为 `from . import client` 形式，核对无绝对导入残留）；
+   - `client.py` 的 `PUG_VIEW_USER_AGENT` 等字符串同步更新（如 `unichemicals-mcp-server/1.0`）；
+   - README / README_zh / 文档与示例中的包名引用。
+3. 清理构建缓存（`dist/`、`*.egg-info`、`__pycache__`）后 `uv build`，并 `uv run pubchempy-mcp-server` 启动冒烟（此时 cas 尚未接入，仅验证重命名无回归）。
+
+#### 验证方法
+- `uv build` 退出码 0，wheel 包含 `pubchem/server.py`；
+- `uv run pubchempy-mcp-server` 正常启动、无 ImportError；
+- `rg -n "pubchem_mcp_server"` 仅剩历史文档（buildlog/goal）中的合理引用。
+
+#### 风险提示
+- 旧构建缓存可能导致误判，先清理再构建；
+- 若存在脚本/配置硬编码旧包名（如 MCP 客户端配置的入口路径），一并核对；
+- 重命名只影响包目录与引用，不改变 `pubchem_*` 工具名（工具名以 `pubchem` 为数据库前缀，保持不变）。
+
+### 步骤 10：`cas` 包骨架与鉴权客户端
+
+#### 目标说明
+建立 `src/cas/{__init__.py, client.py, utils.py}`。`client.py` 负责 `.env` 读取、API key 注入、HTTP 调用、超时/重试与错误归一化；`utils.py` 提供与 pubchem 一致的 `safe_execute` / `to_json_safe`；`registry.py` 在步骤 11 实现。
+
+#### 具体操作
+1. 依赖：`pyproject.toml` 显式声明 `python-dotenv>=1.0`（venv 中模块已存在，补声明即可）。
+2. `src/cas/client.py` 骨架：
+   ```python
+   import os
+   import requests
+   from dotenv import load_dotenv
+
+   BASE_URL = "https://commonchemistry.cas.org/api"   # 以步骤 8 实测为准
+   API_KEY_ENV = "CAS_COMMON_CHEMISTRY_API_KEY"
+
+   class CasApiError(RuntimeError):
+       def __init__(self, status: int, message: str):
+           super().__init__(f"CAS API HTTP {status}: {message}")
+           self.status = status
+
+   def _api_key() -> str:
+       load_dotenv()
+       key = os.environ.get(API_KEY_ENV)
+       if not key:
+           raise RuntimeError(f"环境变量 {API_KEY_ENV} 未配置（请在 .env 中设置）")
+       return key
+
+   def _headers() -> dict:
+       return {"X-Api-Key": _api_key(), "Accept": "application/json"}  # 头名以步骤 8 实测为准
+
+   def _get(path: str, params: dict) -> requests.Response:
+       resp = requests.get(f"{BASE_URL}/{path}", params=params,
+                           headers=_headers(), timeout=30)
+       # 429/5xx 指数退避重试（最多 2 次）；最终失败抛 CasApiError
+       return resp
+   ```
+3. 错误归一化：400 →「请求参数无效」；404 →「物质不存在或无效请求」；500 →「服务端错误」；429 →「限流，请稍后重试」；网络/超时异常也转为友好 `Error: ...` 形态（与 pubchem 一致）。
+4. `/export` 返回 `text/plain`，客户端单独走 `resp.text`（不做 `.json()`）；`/search` 的 `count` 为字符串，序列化时原样保留。
+5. `src/cas/utils.py`：`safe_execute` / `to_json_safe` 与 `pubchem.utils` 同构。两包各自持有（约 20 行），避免跨包导入耦合，保持 `src` 下仅两包的结构。
+6. 安全：`_api_key()` 仅运行时读取；任何异常信息、日志、docstring 不得包含 key 值。
+
+#### 验证方法
+- 未配置 key 时工具返回明确的 `Error: 环境变量 CAS_COMMON_CHEMISTRY_API_KEY 未配置...`，不崩溃、不打印值；
+- 最小冒烟：`uv run python -c "from cas.client import _headers"` 不输出 key；
+- 429/503 重试与超时路径有处理逻辑（人工冒烟或最小单测）。
+
+#### 风险提示
+- key 过期/无效：步骤 8 探测即暴露，若 401/403 先暂停通知用户；
+- 不要把 key 写入 `.env.example` 或任何提交文件（.env 已被 .gitignore 忽略）。
+
+### 步骤 11：`cas` 工具实现与注册（覆盖官方文档全部能力）
+
+#### 目标说明
+按「工具映射表」实现 11 个 `cas_*` 工具：5 个搜索 + 2 个详情 + 2 个 molfile + 2 个便捷提取，全部基于官方文档三端点，命名沿用 `{数据库}_{动作}_{实体}_by_{标识符}`（数据库前缀 `cas`）。
+
+#### 具体操作
+1. `src/cas/registry.py` 配置驱动生成工具（与 pubchem 的 registry 同构），`register_all(mcp)` 统一注册：
+   ```python
+   # src/cas/registry.py
+   from . import client
+   from .utils import safe_execute
+
+   def make_search_substance_by_name():
+       def tool(name: str, offset: int = 0, size: int = 10) -> str:
+           return safe_execute(client.search_substance, name, offset=offset, size=size)
+       tool.__name__ = "cas_search_substance_by_name"
+       tool.__doc__ = ("按名称搜索 CAS Common Chemistry 物质（支持尾部通配符如 car*，不区分大小写）。"
+                       "返回 count 与 results(rn/name/image)。size 上限 100。")
+       return tool
+   ```
+2. 参数校验：`size ∈ [1, 100]`（官方每页上限 100）、`offset ≥ 0`；非法参数返回明确 `Error: ...`。
+3. 每个搜索工具 docstring 写明 `q` 语义：RN 可带/不带连字符；SMILES 支持 canonical/isomeric；InChI 可省略 `InChI=` 前缀；InChIKey 直接反查；名称支持尾部通配符。
+4. `cas_get_molfile_by_casrn` 实现为两段调用：`/detail?cas_rn=` 取 `uri` → `/export?uri=` 取 molfile；`uri` 缺失时返回友好错误。
+5. 便捷提取工具（`cas_get_properties_by_casrn`、`cas_get_image_by_casrn`）基于 `/detail` 响应字段提取，字段缺失时返回明确提示而非空串。
+6. 失败形态与 pubchem 一致：成功返回 JSON 字符串（`to_json_safe`），失败返回 `Error: ...`。
+
+#### 验证方法
+- 真实调用 5 类搜索（`50-00-0`、`C=O`、`InChI=1S/CH2O/...`、`WSFSSNUMVMOOMR-UHFFFAOYSA-N`、`formaldehyde`/`car*`）均返回结果；
+- `cas_get_substance_by_casrn("50-00-0")` 返回完整详情字段；`cas_get_substance_by_uri` 同构；
+- `cas_get_molfile_by_casrn("50-00-0")` / `by_uri` 返回 molfile 文本（V2000）；
+- `size=101` 与非法 offset 返回参数错误；不存在 RN 返回友好 404 错误；
+- `tools/list` 出现全部 11 个 `cas_*` 工具，命名与映射表一致。
+
+#### 风险提示
+- 名称搜索可能返回多条结果，docstring 需说明分页参数（offset/size）并建议先 search 后 detail；
+- `image` SVG 字符串较大（数 KB），返回前不截断，由客户端按需展示；
+- 所有真实调用需网络可达 `commonchemistry.cas.org`；429 限流时工具返回明确限流提示而非崩溃。
+
+### 步骤 12：双库统一注册、版本 1.0.0、依赖与文档
+
+#### 目标说明
+同一个 MCP server 同时暴露 `pubchem_*` 与 `cas_*` 工具；版本升至 1.0.0；README/README_zh 同步加入 CAS 接入说明、工具清单、数据来源与许可证声明。
+
+#### 具体操作
+1. `src/pubchem/server.py` 改为双库注册：
+   ```python
+   from mcp.server.fastmcp import FastMCP
+   from pubchem.registry import register_all as register_pubchem
+   from cas.registry import register_all as register_cas
+
+   mcp = FastMCP("UniChemicals_MCP_Server")   # 服务名变更属预期破坏性变更
+   register_pubchem(mcp)
+   register_cas(mcp)
+   ```
+2. `pyproject.toml`：`version = "1.0.0"`；dependencies 增加 `python-dotenv>=1.0`；description 更新为「多数据库（PubChem + CAS Common Chemistry）化学查询 MCP 服务」。
+3. 新增 `.env.example`（仅含键名占位，**无真实值**）：
+   ```env
+   CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
+   ```
+4. `README.md` / `README_zh.md`：
+   - 新增「CAS / SciFinder 化学查询」章节：环境变量 `CAS_COMMON_CHEMISTRY_API_KEY`、`.env.example` 配置示例、11 个 `cas_*` 工具清单、数据来源（CAS Common Chemistry）、频率与限流提示；
+   - 许可证与归属章节：参考项目（CAS-Integration-API / scifinder-api，Apache-2.0）仅作接口参考，不得整体复制代码并保留署名；CAS Common Chemistry 数据的使用条款以官方页面为准，README 声明数据归属（预期含非商业限制，步骤 8 一并核实官方页面条款）；
+   - 工具总数（41 个 `pubchem_*` + 11 个 `cas_*`）与示例命令更新。
+
+#### 验证方法
+- `uv build` 通过，wheel 同时包含 `pubchem` 与 `cas` 两个包；
+- MCP 握手 `tools/list` 同时出现 41 个 `pubchem_*` 与 11 个 `cas_*` 工具，数量与命名和文档一致；
+- 版本号在 `pyproject.toml`、README、wheel 元数据中均为 1.0.0；
+- 全文检索不到真实 key 值；`.env.example` 只含占位符。
+
+#### 风险提示
+- README 中英文不同步是常见问题，两文件必须同时修改；
+- FastMCP 服务名变更会改变 `serverInfo`，属预期破坏性变更，README 说明即可；
+- PyPI 包名保持 `pubchempy-mcp-server`（避免改名带来的下游断裂），描述中说明 v1.0.0 已是多数据库服务。
+
+### 步骤 13：端到端验收与安全审计
+
+#### 目标说明
+对照 goal.md QA-R006 的成功标准做最终验收：结构、构建、工具可用性、文档、key 安全五方面逐项确认。
+
+#### 具体操作
+1. 结构验收：`Get-ChildItem src` 只有 `pubchem` 与 `cas`；`rg -n "pubchem_mcp_server"` 仅剩历史文档引用。
+2. 构建与启动：`uv build`；`uv run pubchempy-mcp-server`。
+3. MCP 冒烟：initialize → `tools/list` → 至少各一条 pubchem 与 cas 真实查询（如 `pubchem_search_compound_by_cid(2244)`、`cas_get_substance_by_casrn("50-00-0")`、`cas_get_molfile_by_casrn("50-00-0")`、InChIKey 搜索）。
+4. 安全审计：
+   ```powershell
+   git grep -n "CAS_COMMON_CHEMISTRY_API_KEY" -- ':!.env'   # 只允许键名占位，无值
+   git status --short                                        # 无 .env、无 key 相关文件入库
+   ```
+   检查 `dist/` 产物与日志无 key 明文。
+5. 文档一致性：README/README_zh 工具清单与 `tools/list` 一致。
+6. `project-docs/buildlog.md` 记录每一步结果（步骤 8–13）并提交。
+
+#### 验证方法
+- 上述 5 项全部通过即 v1.0.0 完成。
+
+#### 风险提示
+- key 可能因限流在验收时临时返回 429，需区分「代码错误」与「限流」，重试或等待后复验；
+- 若步骤 8 发现 key 失效，v1.0.0 验收前必须先轮换 key；
+- 参考项目能力（结构搜索/文档/Markush/商业来源/光谱）不属于本 key 可用面，README 需明确边界，避免过度承诺。
+
+## v1.0.0 Q&A 记录（官方文档版）
+
+**Q：** 为什么本次以官方文档为设计依据，参考项目降级为参考？
+**A：** 测试 key 名为 `CAS_COMMON_CHEMISTRY_API_KEY`，明确指向 CAS Common Chemistry API；用户提供的官方 HTML 文档（OAS 2.0）定义了该 key 可调用的全部三个端点。参考项目演示的 Integration API（client credentials）与 SciFinder-n（OAuth2 + PKCE）需要另外的凭据体系，本 key 无法调用，因此不作为功能来源，仅作工具命名与返回结构参考。
+
+**Q：** 官方文档下 key 能实现的「全部功能」具体指什么？
+**A：** 三端点全量：`/search` 的 5 类检索（CAS RN / SMILES / InChI / InChIKey / 名称+尾部通配符，含 offset/size 分页）、`/detail` 的完整物质详情（结构标识符、分子式/质量、实验性质与引用、同义词、被替代 RN、SVG 结构图）、`/export` 的 molfile 导出；外加 2 个基于 detail 的便捷提取工具（性质、结构图）。结构搜索/文档/反应/Markush/商业来源/光谱属于 Integration API 或 SciFinder-n 能力，本 key 不支持。
+
+**Q：** `/search` 为什么拆成 5 个工具？
+**A：** 同一端点、不同 `q` 语义；沿用 pubchem 的 `{数据库}_{动作}_{实体}_by_{标识符}` 命名规范，便于 AI 按标识符类型发现与调用；底层共用 `client.search()`，无重复实现。
+
+**Q：** 为什么 `cas` 与 `pubchem` 各自持有 utils 中的 `safe_execute` / `to_json_safe`？
+**A：** 交付结构要求 `src` 下仅有 `pubchem` 与 `cas` 两包，不引入公共包；这两个辅助函数体量很小（约 20 行），各自持有以避免跨包耦合，代价是少量重复，可接受。
+
+**Q：** 官方文档与旧 v1.0.0 计划的关键差异是什么？
+**A：** `/search` 参数为 `q` + `offset` + `size`（旧计划臆测了 `match`/`length`）；`/export` 参数为 `uri` + `returnAsAttachment`；鉴权头官方正文为 `X-Api-Key`（curl 示例为 `X-API-KEY`，实测确认大小写敏感性）；错误码为 400/404/500；`count` 为字符串；`/detail` 的 404 描述为 Invalid Request（无效请求）。
