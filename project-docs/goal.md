@@ -175,18 +175,22 @@ v1.0.0 交付：MCP server 同时提供 `pubchem` 与 `cas` 两族工具；`cas`
   2. 步骤 2「清理 pubchempy 旧包」的范围是什么？（a. 仅清理本地 `dist/` 下的旧 wheel/sdist 产物（如 `pubchempy_mcp_server-0.1.1/0.2.0/0.3.0`）；b. 从 PyPI 下架旧包 `pubchempy-mcp-server`（0.3.0 及更早，需你在 PyPI 操作）；c. 清理文档/示例中的旧名引用；d. 其他）
   3. 是否确认**不删除** `pyproject.toml` 中的第三方依赖 `pubchempy>=1.0.5`（它是 PubChem 数据源的工具库，删除会导致 40 个 `pubchem_*` 工具失效）？
 - **用户回答**
-  1. [等待用户回答]
-  2. [等待用户回答]
-  3. [等待用户回答]
+  1. 步骤 1 所指配置文件就是 `mcp-client-example.json`（仓库中没有其他 mcp.json）。
+  2. 只清理本地 `dist/` 下的旧构建产物（`pubchempy_mcp_server-0.1.1/0.2.0/0.3.0` 的 wheel/sdist，已不入库）。
+  3. 确保第三方依赖没问题（即保留 `pubchempy>=1.0.5`，不删除）。
 - **提炼结论**
-  - [收到回答后补充]
+  - 步骤 1 范围 = `mcp-client-example.json` 与 README 等面向调用方的文件，调用名统一为 `unichemicals-mcp-server`（v1.1.0 已基本完成，本步骤做收口复核）。
+  - 步骤 2 范围 = 仅清理本地 `dist/` 下旧包名（`pubchempy_mcp_server-*`）的构建产物；不含 PyPI 下架、不含历史文档改写。
+  - 约束 = 第三方依赖 `pubchempy>=1.0.5` 必须保留并验证可用（PubChem 数据源依赖）。
+  - 待确认项：README 中「基于 PubChemPy 构建」的旧定位描述是否调整未获明确答复（`未回答`），默认保持现状，如需调整可再确认。
 - **影响的目标文档章节**
-  - 核心目标 / 范围界定 / 成功标准
+  - 核心目标 / 范围界定 / 成功标准 / 约束条件
 <!-- GOAL-QA-R007-END -->
 
 <!-- GOAL-QA-LOG-END -->
 
 ## 备注
 - 本文档主章节自 2026-08-08 起反映 v1.0.0 目标（QA-R006）；v0.3.0 周期的目标内容保留在「澄清问答记录」QA-R001 ~ QA-R005 历史中。
+- 2026-08-09 新增 QA-R007：v1.1.0 收尾目标（unichemicals 调用一致性收口 + dist 旧构建产物清理 + 第三方依赖保留验证）。
 - 参考项目位置：`reference-projects/CAS-Integration-API-main/CAS-Integration-API-main`（Python）与 `reference-projects/scifinder-api-main/scifinder-api-main`（JS/TS 官方示例），均已加入 .gitignore。
 - 下一步建议调用 **project-planner-cn** agent 进行 v1.0.0 的实现规划。
