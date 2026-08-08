@@ -622,3 +622,179 @@ PubChemPy 不提供光谱功能。光谱数据存在于 PubChem 的 PUG-View 服
 
 **Q：** 官方文档与旧 v1.0.0 计划的关键差异是什么？
 **A：** `/search` 参数为 `q` + `offset` + `size`（旧计划臆测了 `match`/`length`）；`/export` 参数为 `uri` + `returnAsAttachment`；鉴权头官方正文为 `X-Api-Key`（curl 示例为 `X-API-KEY`，实测确认大小写敏感性）；错误码为 400/404/500；`count` 为字符串；`/detail` 的 404 描述为 Invalid Request（无效请求）。
+
+# v1.1.0 构建计划（包名统一：pubchempy-mcp-server → unichemicals-mcp-server）
+
+> **版本状态**：本增量章节规划把发行包名从 `pubchempy-mcp-server` 统一为 `unichemicals-mcp-server`（PyPI 规范名，与用户提出的 `unichemicals_mcpserver` 等价），背景是 v1.0.0 后服务已同时接入 PubChem 与 CAS 两个数据源，旧名不再贴切。此节**推翻**步骤 12/13 中「PyPI 包名保持 pubchempy-mcp-server 避免下游断裂」的旧决策（理由见文末 Q&A）。已有步骤 1–13 与既有 Q&A 内容保持不变，本次仅增量追加。
+
+## 影响面清单（主 agent 已核查，执行时逐一核对）
+
+| 文件 | 位置 | 改动 |
+|---|---|---|
+| `pyproject.toml` | `[project] name` | `pubchempy-mcp-server` → `unichemicals-mcp-server` |
+| `pyproject.toml` | `[project.scripts]` | `pubchempy-mcp-server = "pubchem.server:main"` → 新命令名 = `"pubchem.server:main"` |
+| `uv.lock` | 根包 `name` | 由 `uv lock` 重新生成（勿手改） |
+| `mcp-client-example.json` | `args` | `uvx --refresh` 旧名 → 新名 |
+| `README.md` / `README_zh.md` | PyPI 徽章、客户端配置示例、`uv run` 命令 | 旧名 → 新名 |
+| `src/pubchem/server.py` | FastMCP 显示名 | 已是 `UniChemicals_MCP_Server`，默认不改（见 Q&A） |
+| `src/pubchem/client.py` | User-Agent | 已是 `unichemicals-mcp-server/1.0`，默认不改 |
+| `pyproject.toml` 依赖 | `pubchempy>=1.0.5` | 第三方库 PubChemPy，**禁止修改** |
+| `project-docs/*` | 历史引用 | 历史记录，默认不回改 |
+
+## 开发计划
+
+### 步骤 14：确认最终包名与 PyPI 可用性
+
+#### 目标说明
+先锁定最终写法并确认 PyPI 上该规范名可用，避免后续返工；发布前检查是改名流程的第一道闸门。
+
+#### 具体操作
+1. 确定规范名：推荐 `unichemicals-mcp-server`（PyPI 将 `_`/`-`/大小写归一化，与 `unichemicals_mcpserver` 是同一个规范名；连字符风格与旧名 `pubchempy-mcp-server` 一致）。
+2. 检查 PyPI 占用情况（PowerShell）：
+   ```powershell
+   try {
+       $r = Invoke-RestMethod -Uri 'https://pypi.org/pypi/unichemicals-mcp-server/json' -TimeoutSec 30
+       "已占用: $($r.info.name) $($r.info.version)"
+   } catch {
+       "未占用（404）: $($_.Exception.Message)"
+   }
+   ```
+3. 与用户确认最终写法（连字符或下划线）后进入步骤 15。
+
+#### 验证方法
+- PyPI 返回 404（未被他人占用），或确认占用者为用户本人旧包；
+- 用户确认最终名字写法。
+
+#### 风险提示
+- 因 PyPI 归一化，`unichemicals_mcpserver` 与 `unichemicals-mcp-server` 只需查一次占用；
+- 若规范名已被他人占用，需更换候选名（如加后缀），不得与既有包混淆。
+
+### 步骤 15：修改 pyproject.toml（name + [project.scripts]）
+
+#### 目标说明
+把发行名与控制台命令改为新名；入口仍指向 `pubchem.server:main`，源码与工具行为零改动。
+
+#### 具体操作
+1. 编辑 `pyproject.toml`：
+   ```toml
+   [project]
+   name = "unichemicals-mcp-server"
+   # version / description / dependencies 保持不变
+
+   [project.scripts]
+   unichemicals-mcp-server = "pubchem.server:main"
+   ```
+2. 保留 `pubchempy>=1.0.5` 依赖（第三方库 PubChemPy，勿改）。
+
+#### 验证方法
+- `Select-String pyproject.toml -Pattern 'name = "unichemicals'` 命中；
+- `rg -n "pubchempy-mcp-server" pyproject.toml` 无结果（依赖 `pubchempy>=1.0.5` 除外）。
+
+#### 风险提示
+- 只改 `name` 与 `[project.scripts]` 两处，误改依赖名会导致安装失败；
+- 若用户同时要求统一 FastMCP 显示名，需在本步骤同步改 `src/pubchem/server.py`（默认不做，见 Q&A）。
+
+### 步骤 16：重新生成 uv.lock
+
+#### 目标说明
+`uv.lock` 中的根包名由 pyproject 生成，需重新锁定，避免锁文件与包元数据不一致。
+
+#### 具体操作
+```powershell
+uv lock
+```
+
+#### 验证方法
+- `Select-String uv.lock -Pattern 'name = "unichemicals-mcp-server"'` 命中根包；
+- `rg -n 'name = "pubchempy-mcp-server"' uv.lock` 无结果（`name = "pubchempy"` 依赖项保留属正常）。
+
+#### 风险提示
+- uv 版本过旧导致 lock 失败时，先 `uv self update`，或用 `uv sync` 触发重锁；
+- lock 变更应只涉及根包名相关行；若出现大范围 diff，需检查 pyproject 是否有意外改动。
+
+### 步骤 17：更新客户端示例与中英文 README
+
+#### 目标说明
+让用户按新名字接入，避免 README、示例与发布包不一致。
+
+#### 具体操作
+1. `mcp-client-example.json`：`"args": ["--refresh", "unichemicals-mcp-server"]`。
+2. `README.md` / `README_zh.md` 三处同步修改：
+   - PyPI 徽章 URL（`badge.fury.io/py/…` 与链接地址）→ 新名；
+   - MCP 客户端配置示例 `uvx --refresh <新名>`；
+   - 本地启动命令 `uv run <新名>`。
+3. 保留 PubChemPy 致谢段落与「依赖第三方库 PubChemPy」说明。
+
+#### 验证方法
+- `ConvertFrom-Json mcp-client-example.json` 解析成功；
+- `rg -n "pubchempy-mcp-server" README.md README_zh.md mcp-client-example.json` 无结果。
+
+#### 风险提示
+- 中英文文档不同步是高频问题，两个文件必须同时修改；
+- 徽章在包发布前显示 unknown 属预期，发布后自动恢复。
+
+### 步骤 18：构建、本地冒烟与残留检查
+
+#### 目标说明
+验证改名后构建产物、入口命令与 MCP 服务全部正常，并确认全仓无旧名残留（历史文档除外）。
+
+#### 具体操作
+```powershell
+uv build
+uv run unichemicals-mcp-server   # 冒烟：initialize → tools/list → 51 工具
+rg -n -i "pubchempy-mcp-server" -S --glob '!.git/**' --glob '!reference-projects/**' --glob '!dist/**' --glob '!.venv/**' .
+```
+
+#### 验证方法
+- `uv build` 成功，dist 产物名为 `unichemicals_mcp_server-*.whl`；
+- wheel 内 `entry_points.txt` 为 `unichemicals-mcp-server = pubchem.server:main`；
+- MCP 握手 `serverInfo` = `UniChemicals_MCP_Server`，`tools/list` 51 个工具（40 pubchem + 11 cas）无回归；
+- `rg` 残留仅剩 `project-docs/` 历史文档引用（预期保留，不回改）。
+
+#### 风险提示
+- 旧虚拟环境中入口命令可能不生效，删除重建 `.venv` 或确认 `uv run` 使用最新 pyproject；
+- 清理 `dist/` 旧产物避免混淆（`Remove-Item dist -Recurse -Force`；该目录已被 gitignore，不影响仓库）。
+
+### 步骤 19：PyPI 发布与下游接入验证（需用户授权）
+
+#### 目标说明
+把新名发布到 PyPI，并验证 `uvx` 远程接入；旧包保留以兼容已接入的客户端。
+
+#### 具体操作
+```powershell
+uv publish
+uvx --refresh unichemicals-mcp-server
+```
+
+#### 验证方法
+- PyPI 页面 `https://pypi.org/project/unichemicals-mcp-server/` 可访问且版本正确；
+- `uvx` 独立环境 MCP 握手正常，`tools/list` 51 个工具；
+- 旧包 `pubchempy-mcp-server` 0.3.0 保持不动（README 可选加一行迁移说明）。
+
+#### 风险提示
+- PyPI 不允许覆盖已发布版本，发布前确认版本号：1.0.0 尚未以任何名字发布过则直接首次发布 1.0.0；若已发布过旧名 1.0.0 则升级为 1.1.0；
+- `uv publish` 需要 PyPI 凭据与用户授权，未授权不得执行；
+- 已配置旧包名的客户端需更新配置后才可接入新包。
+
+## v1.1.0 Q&A 记录（改名版）
+
+**Q：** 用户写的 `unichemicals_mcpserver` 和 `unichemicals-mcp-server` 是同一个名字吗？
+**A：** PyPI 对包名做归一化（`_`/`-`/大小写视为同一规范名），两者在 PyPI 上是同一个包；推荐连字符写法，与现有 `pubchempy-mcp-server` 风格一致。控制台命令名则以 `pyproject.toml` 的 `[project.scripts]` 中写的为准。
+
+**Q：** 为什么推翻步骤 12/13「PyPI 包名保持不变」的旧决策？
+**A：** 该决策的背景是 v1.0.0 接入 CAS 后仍沿用旧名以避免下游断裂；但服务已成为双数据源，旧名 `pubchempy` 无法表达 UniChemicals 定位，且 1.0.0 尚未发布、改名无存量用户成本，属于零成本改名窗口。
+
+**Q：** 服务显示名 `UniChemicals_MCP_Server` 和 User-Agent 要不要一起改？
+**A：** 默认不改：二者已是新品牌（UniChemicals），与目标一致；若修改 FastMCP 显示名会改变 `serverInfo`，属破坏性变更，仅在用户明确要求时执行。
+
+**Q：** `project-docs/` 下的历史引用要回改吗？
+**A：** 默认不回改：goal / project-plan / buildlog / teach 是历史记录，记录当时的事实与决策；只需更新面向未来的文档（README、示例、本次新步骤）。
+
+**Q：** 改名对已发布 0.3.0 的用户有影响吗？
+**A：** 旧包 `pubchempy-mcp-server` 0.3.0 保留在 PyPI，原有客户端配置继续可用；新用户按新名接入。如需提示迁移，在 README 加一行说明即可。
+
+## 待用户确认项
+
+1. 最终包名写法：`unichemicals-mcp-server`（推荐）还是 `unichemicals_mcpserver`；
+2. 是否把 PyPI 发布（步骤 19）纳入本次执行范围；
+3. 是否需要同步统一 FastMCP 显示名 / User-Agent（默认不统一）。
