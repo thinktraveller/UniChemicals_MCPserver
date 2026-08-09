@@ -187,10 +187,30 @@ v1.0.0 交付：MCP server 同时提供 `pubchem` 与 `cas` 两族工具；`cas`
   - 核心目标 / 范围界定 / 成功标准 / 约束条件
 <!-- GOAL-QA-R007-END -->
 
+### QA-R008：删除用途不大的 BySdf 变体工具与 substance sourceid 搜索
+<!-- GOAL-QA-R008-START -->
+- **提问时间**：2026-08-09 12:59
+- **提问目的**：用户认为 GetProperty / Synonym / Search 的 BySdf 变体工具与 `pubchemSearchSubstanceBySourceid` 用途不大且调用方式复杂，要求删除。已在 `src/pubchem/registry.py` 核对实际工具清单：`COMPOUND_NAMESPACES` 含 `sdf`（生成 3 个 BySdf 变体），`SUBSTANCE_NAMESPACES` 仅含 `sid`/`name`（不存在 by_sdf 变体），另有独立的 `pubchem_search_substance_by_sourceid` 工具 1 个。
+- **问题列表**
+  1. 确认删除清单：`pubchem_search_compound_by_sdf`、`pubchem_get_property_by_sdf`、`pubchem_get_synonym_by_sdf`、`pubchem_search_substance_by_sourceid`，共 4 个。
+  2. 是否同步更新 README / README_zh 工具清单与数量（51 → 47，pubchem 40 → 36，cas 11 不变）？
+- **用户回答**
+  1. 删除以上 4 个工具（用户原话：用途不大且调用方式复杂）。
+  2. 同步更新 README 清单与数量（默认执行）。
+- **提炼结论**
+  - 删除清单 = 4 个 pubchem 工具：BySdf 变体 ×3（search_compound / get_property / get_synonym）+ sourceid 搜索 ×1。
+  - 实现方式：`COMPOUND_NAMESPACES` 移除 `sdf`（一次移除 3 个变体）+ 删除 `_make_substance_search_by_sourceid` 工厂与注册行。
+  - 工具总数 51 → 47（pubchem 40 → 36，cas 11 不变）；README / README_zh 同步更新。
+  - `client.get_substances` 仍被 sid/name 变体使用，保留不删；历史文档记录不改写。
+- **影响的目标文档章节**
+  - 核心目标 / 范围界定 / 成功标准
+<!-- GOAL-QA-R008-END -->
+
 <!-- GOAL-QA-LOG-END -->
 
 ## 备注
 - 本文档主章节自 2026-08-08 起反映 v1.0.0 目标（QA-R006）；v0.3.0 周期的目标内容保留在「澄清问答记录」QA-R001 ~ QA-R005 历史中。
 - 2026-08-09 新增 QA-R007：v1.1.0 收尾目标（unichemicals 调用一致性收口 + dist 旧构建产物清理 + 第三方依赖保留验证）。
+- 2026-08-09 新增 QA-R008：删除 4 个 pubchem 工具（BySdf 变体 ×3 + substance sourceid 搜索 ×1）。
 - 参考项目位置：`reference-projects/CAS-Integration-API-main/CAS-Integration-API-main`（Python）与 `reference-projects/scifinder-api-main/scifinder-api-main`（JS/TS 官方示例），均已加入 .gitignore。
 - 下一步建议调用 **project-planner-cn** agent 进行 v1.0.0 的实现规划。
