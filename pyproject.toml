@@ -1,6 +1,6 @@
 [project]
 name = "unichemicals-mcp-server"
-version = "1.0.0"
+version = "1.1.0"
 description = "An MCP server for multi-database chemistry queries (PubChem + CAS Common Chemistry)."
 readme = "README.md"
 requires-python = ">=3.10"

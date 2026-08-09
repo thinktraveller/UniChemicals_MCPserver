@@ -19,7 +19,7 @@ socket.setdefaulttimeout(REQUEST_TIMEOUT)
 # PUG-View direct REST access (PubChemPy has no spectrum support).
 PUG_VIEW_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON"
 SPECTRUM_HEADING = "Spectral Information"
-PUG_VIEW_USER_AGENT = "unichemicals-mcp-server/1.0"
+PUG_VIEW_USER_AGENT = "unichemicals-mcp-server/1.1"
 PUG_VIEW_TIMEOUT = 30
 PUG_VIEW_RETRIES = 3
 

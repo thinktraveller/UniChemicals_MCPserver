@@ -433,3 +433,25 @@
 
 ### 下一步计划
 - 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0。
+
+## [2026-08-09 13:06] 步骤 23：版本升至 1.1.0 并构建发布包
+
+### 执行的任务
+- 用户要求打包 v1.1.0 新包准备发布。版本自 1.0.0 升至 1.1.0（1.0.0 从未发布，1.1.0 为首发版本号）。
+
+### 关键变更
+- `pyproject.toml`：`version = "1.0.0"` → `"1.1.0"`。
+- `src/pubchem/client.py`：`PUG_VIEW_USER_AGENT` → `unichemicals-mcp-server/1.1`。
+- `uv.lock`：根包版本重新生成为 1.1.0（被 .gitignore 忽略，不入库）。
+- `dist/`：清理旧 1.0.0 产物，重新构建 `unichemicals_mcp_server-1.1.0` wheel + sdist。
+
+### 验证结果
+- `uv build` 成功，产出 `dist/unichemicals_mcp_server-1.1.0-py3-none-any.whl` 与 `.tar.gz`；
+- wheel METADATA `Version: 1.1.0`；MCP 握手 `tools/list` 47 个工具无回归。
+
+### 遇到的问题及解决方案
+- 无。
+
+### 下一步计划
+- 用户执行发布：`uv publish dist/unichemicals_mcp_server-1.1.0-py3-none-any.whl dist/unichemicals_mcp_server-1.1.0.tar.gz`，或用 `uv publish` 发布 `dist/` 下全部产物；
+- 发布后 `uvx --refresh unichemicals-mcp-server` 独立环境验收。

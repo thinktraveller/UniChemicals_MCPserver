@@ -841,6 +841,24 @@ uvx --refresh unichemicals-mcp-server
 - 已接入旧工具的客户端调用这 4 个工具会失败，属预期破坏性变更；其余 47 个工具不受影响；
 - `client.get_substances` 仍被 sid/name 变体使用，保留不删。
 
+### 步骤 23：版本升至 1.1.0 并准备发布
+
+#### 目标说明
+在 v1.1.0 全部变更（改名收尾、README 定位调整、工具清理）完成后，把版本从 1.0.0 升至 1.1.0，构建新包供用户 `uv publish` 发布。
+
+#### 具体操作
+1. `pyproject.toml`：`version = "1.1.0"`。
+2. `src/pubchem/client.py`：`PUG_VIEW_USER_AGENT` 同步为 `unichemicals-mcp-server/1.1`。
+3. `uv lock` 重新生成锁文件（`.gitignore` 忽略，不入库）。
+4. 清理 `dist/` 中旧的 1.0.0 产物后 `uv build`，产出 `unichemicals_mcp_server-1.1.0`。
+
+#### 验证方法
+- wheel METADATA `Version: 1.1.0`；`dist/` 仅剩 1.1.0 产物；
+- 构建与 MCP 握手无回归（`tools/list` 47 个工具）。
+
+#### 风险提示
+- 1.0.0 从未发布，1.1.0 作为首发版本号无冲突；发布前确保 `dist/` 无旧版本残留，避免误传。
+
 ## v1.1.0 Q&A 记录（改名版）
 
 **Q：** 用户写的 `unichemicals_mcpserver` 和 `unichemicals-mcp-server` 是同一个名字吗？
