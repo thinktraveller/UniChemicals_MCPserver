@@ -412,3 +412,24 @@
 
 ### 下一步计划
 - 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0 后可正式对外使用；旧包 `pubchempy-mcp-server` 保留不下架。
+
+## [2026-08-09 12:59] 步骤 22：删除用途不大的 pubchem 工具（BySdf 变体 ×3 + sourceid 搜索 ×1）
+
+### 执行的任务
+- 用户确认删除 4 个用途不大、调用方式复杂的 pubchem 工具：`pubchem_search_compound_by_sdf`、`pubchem_get_property_by_sdf`、`pubchem_get_synonym_by_sdf`、`pubchem_search_substance_by_sourceid`（对应 goal.md QA-R008）。
+- 修改注册表与 README 清单/数量，并验证 `tools/list`。
+
+### 关键变更
+- `src/pubchem/registry.py`：`COMPOUND_NAMESPACES` 移除 `"sdf"`（自动移除 3 个 BySdf 变体）；删除 `_make_substance_search_by_sourceid` 工厂及其注册行。
+- `README.md` / `README_zh.md`：删除 4 个工具的清单项；工具总数 51 → 47（pubchem 40 → 36，cas 11 不变）。
+- `project-docs/goal.md`：新增 QA-R008 记录。
+
+### 验证结果
+- `rg -n "by_sdf|by_sourceid" src README.md README_zh.md` 无结果（历史文档除外）；
+- `uv build` 成功；MCP 握手 `tools/list` 返回 47 个工具（36 pubchem + 11 cas），无上述 4 个工具。
+
+### 遇到的问题及解决方案
+- 用户提到的 substance 搜索 BySdf 变体实际不存在（`SUBSTANCE_NAMESPACES` 仅含 sid/name），已按实际清单确认删除范围。
+
+### 下一步计划
+- 步骤 19（用户执行）：`uv publish` 发布 `unichemicals-mcp-server` 1.0.0。

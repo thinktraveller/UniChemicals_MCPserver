@@ -19,7 +19,7 @@ from .utils import safe_execute
 INT_NAMESPACES = {"cid", "sid", "aid"}
 
 # Namespaces usable for standardized compound records.
-COMPOUND_NAMESPACES = ["cid", "name", "smiles", "sdf", "inchi", "inchikey", "formula"]
+COMPOUND_NAMESPACES = ["cid", "name", "smiles", "inchi", "inchikey", "formula"]
 
 # Namespaces for identifier resolution tools.
 CID_NAMESPACES = ["name", "smiles", "inchi", "inchikey", "formula"]
@@ -126,22 +126,6 @@ def _make_substance_search(namespace: str) -> Callable[..., str]:
         return safe_execute(client.get_substances, identifier, namespace)
 
     tool.__name__ = f"pubchem_search_substance_by_{namespace}"
-    tool.__doc__ = doc
-    return tool
-
-
-def _make_substance_search_by_sourceid() -> Callable[..., str]:
-    doc = (
-        "Search PubChem raw substance records by source id and source name.\n\n"
-        "- sourceid: the identifier assigned by the source\n"
-        "- source_name: the name of the depositing source\n\n"
-        "Returns a JSON string of matching substance records, or Error: <message>."
-    )
-
-    def tool(sourceid: str, source_name: str) -> str:
-        return safe_execute(client.get_substances, sourceid, f"sourceid/{source_name}")
-
-    tool.__name__ = "pubchem_search_substance_by_sourceid"
     tool.__doc__ = doc
     return tool
 
@@ -317,7 +301,6 @@ def register_all(mcp: Any) -> None:
         mcp.tool(name=f"pubchem_search_compound_by_{namespace}")(_make_compound_search(namespace))
     for namespace in SUBSTANCE_NAMESPACES:
         mcp.tool(name=f"pubchem_search_substance_by_{namespace}")(_make_substance_search(namespace))
-    mcp.tool(name="pubchem_search_substance_by_sourceid")(_make_substance_search_by_sourceid())
     mcp.tool(name="pubchem_search_assay_by_aid")(_make_assay_search())
     for namespace in COMPOUND_NAMESPACES:
         mcp.tool(name=f"pubchem_get_property_by_{namespace}")(_make_property_tool(namespace))

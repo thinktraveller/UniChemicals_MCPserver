@@ -63,7 +63,7 @@ Add the following to your MCP client configuration (e.g., Cherry Studio `MCP Ser
 
 ## 🛠️ Available Tools (API Reference)
 
-This server exposes **51 semantic tools** — 40 `pubchem_*` tools and 11 `cas_*` tools — each named as `{database}_{action}_{entity}_by_{identifier}` so the source database (`pubchem` / `cas`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
+This server exposes **47 semantic tools** — 36 `pubchem_*` tools and 11 `cas_*` tools — each named as `{database}_{action}_{entity}_by_{identifier}` so the source database (`pubchem` / `cas`), the action (`search` / `get` / `resolve`), the entity and the search key are always explicit.
 
 ### CAS Common Chemistry tools (`cas_*`)
 
@@ -102,7 +102,6 @@ Retrieve standardized compound records from the PubChem database.
   - `pubchem_search_compound_by_cid`
   - `pubchem_search_compound_by_name`
   - `pubchem_search_compound_by_smiles`
-  - `pubchem_search_compound_by_sdf`
   - `pubchem_search_compound_by_inchi`
   - `pubchem_search_compound_by_inchikey`
   - `pubchem_search_compound_by_formula`
@@ -117,7 +116,6 @@ Retrieve raw, unstandardized substance records as originally deposited to PubChe
 - **Tools**:
   - `pubchem_search_substance_by_sid`
   - `pubchem_search_substance_by_name`
-  - `pubchem_search_substance_by_sourceid` (requires `sourceid` and `source_name`)
 
 ### 3. Assay Search (`pubchem_search_assay_by_aid`)
 Retrieve bioassay (biological activity) records.
@@ -127,7 +125,7 @@ Retrieve bioassay (biological activity) records.
 ### 4. Properties Retrieval (`pubchem_get_property_by_*`)
 Efficiently retrieve specific chemical properties in batch without downloading the entire compound record.
 - **Tools**:
-  - `pubchem_get_property_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_property_by_cid`, `name`, `smiles`, `inchi`, `inchikey`, `formula`
   - `pubchem_get_property_by_cids` (batch: pass a list of CIDs)
 - **Arguments**:
   - `properties`: A list of desired properties (e.g., `['MolecularFormula', 'MolecularWeight', 'InChI', 'CanonicalSMILES', 'IsomericSMILES', 'XLogP']`).
@@ -137,7 +135,7 @@ Efficiently retrieve specific chemical properties in batch without downloading t
 ### 5. Synonyms & Aliases (`pubchem_get_synonym_by_*`)
 Fetch all known aliases, systematic names, and trade names for a given chemical.
 - **Tools**:
-  - `pubchem_get_synonym_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_synonym_by_cid`, `name`, `smiles`, `inchi`, `inchikey`, `formula`
 
 ### 6. Identifier Resolution (`pubchem_resolve_*_by_*`)
 Convert between different chemical identifiers (e.g., finding the CID for a specific name or SMILES).

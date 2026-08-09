@@ -63,7 +63,7 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
 
 ## 🛠️ 可用工具列表 (API 参考)
 
-本服务器提供 **51 个语义化工具**——40 个 `pubchem_*` 工具与 11 个 `cas_*` 工具，每个工具按 `{数据库}_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem` / `cas`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
+本服务器提供 **47 个语义化工具**——36 个 `pubchem_*` 工具与 11 个 `cas_*` 工具，每个工具按 `{数据库}_{动作}_{实体}_by_{标识符}` 命名，数据来源（`pubchem` / `cas`）、动作（`search` / `get` / `resolve`）、实体与搜索依据一目了然。
 
 ### CAS Common Chemistry 工具（`cas_*`）
 
@@ -102,7 +102,6 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
   - `pubchem_search_compound_by_cid`
   - `pubchem_search_compound_by_name`
   - `pubchem_search_compound_by_smiles`
-  - `pubchem_search_compound_by_sdf`
   - `pubchem_search_compound_by_inchi`
   - `pubchem_search_compound_by_inchikey`
   - `pubchem_search_compound_by_formula`
@@ -117,7 +116,6 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
 - **工具列表**:
   - `pubchem_search_substance_by_sid`
   - `pubchem_search_substance_by_name`
-  - `pubchem_search_substance_by_sourceid` (需要 `sourceid` 和 `source_name`)
 
 ### 3. 生物测定搜索 (`pubchem_search_assay_by_aid`)
 检索生物测定（生物活性）记录。
@@ -127,7 +125,7 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
 ### 4. 属性批量获取 (`pubchem_get_property_by_*`)
 无需下载完整的化合物记录，即可高效地批量获取特定的化学属性。
 - **工具列表**:
-  - `pubchem_get_property_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_property_by_cid`, `name`, `smiles`, `inchi`, `inchikey`, `formula`
   - `pubchem_get_property_by_cids`（批量：传入 CID 列表）
 - **参数说明**:
   - `properties`: 需要获取的属性列表 (例如：`['MolecularFormula', 'MolecularWeight', 'InChI', 'CanonicalSMILES', 'IsomericSMILES', 'XLogP']`)。
@@ -137,7 +135,7 @@ CAS_COMMON_CHEMISTRY_API_KEY=your_api_key_here
 ### 5. 同义词与别名 (`pubchem_get_synonym_by_*`)
 获取特定化学物质的所有已知别名、系统命名和商品名。
 - **工具列表**:
-  - `pubchem_get_synonym_by_cid`, `name`, `smiles`, `sdf`, `inchi`, `inchikey`, `formula`
+  - `pubchem_get_synonym_by_cid`, `name`, `smiles`, `inchi`, `inchikey`, `formula`
 
 ### 6. 标识符转换 (`pubchem_resolve_*_by_*`)
 在不同的化学标识符之间进行转换（例如，通过名称或 SMILES 查找对应的 CID）。

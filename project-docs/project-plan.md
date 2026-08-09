@@ -821,6 +821,26 @@ uvx --refresh unichemicals-mcp-server
 - 不得删除第三方依赖 `pubchempy`（PubChem 数据源依赖，删除会导致 40 个 `pubchem_*` 工具失效）；
 - 本地清理不影响 PyPI 上的旧包 `pubchempy-mcp-server`（0.3.0），是否下架由用户在 PyPI 操作。
 
+### 步骤 22：删除用途不大的 pubchem 工具（BySdf 变体 + sourceid 搜索）
+
+#### 目标说明
+用户确认删除 4 个用途不大、调用方式复杂的 pubchem 工具：`pubchem_search_compound_by_sdf`、`pubchem_get_property_by_sdf`、`pubchem_get_synonym_by_sdf`、`pubchem_search_substance_by_sourceid`，并同步文档（对应 goal.md QA-R008）。
+
+#### 具体操作
+1. `src/pubchem/registry.py`：
+   - `COMPOUND_NAMESPACES` 移除 `"sdf"`（一次移除 3 个 BySdf 变体：search_compound / get_property / get_synonym）；
+   - 删除 `_make_substance_search_by_sourceid` 工厂及其注册行。
+2. `README.md` / `README_zh.md`：删除 4 个工具的清单项；工具总数 51 → 47（pubchem 40 → 36，cas 11 不变）。
+3. `uv build` + MCP 握手验证 `tools/list`。
+
+#### 验证方法
+- `rg -n "by_sdf|by_sourceid" src README.md README_zh.md` 无结果（历史文档除外）；
+- MCP 握手 `tools/list` 返回 47 个工具（36 pubchem + 11 cas），不再包含上述 4 个工具。
+
+#### 风险提示
+- 已接入旧工具的客户端调用这 4 个工具会失败，属预期破坏性变更；其余 47 个工具不受影响；
+- `client.get_substances` 仍被 sid/name 变体使用，保留不删。
+
 ## v1.1.0 Q&A 记录（改名版）
 
 **Q：** 用户写的 `unichemicals_mcpserver` 和 `unichemicals-mcp-server` 是同一个名字吗？
