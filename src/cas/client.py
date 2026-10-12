@@ -1,12 +1,32 @@
 """CAS Common Chemistry API data access layer.
 
 Wraps the three official endpoints (``/search``, ``/detail``, ``/export``)
-documented by CAS Common Chemistry. Authentication uses the ``X-Api-Key``
-header with the API token from the ``CAS_COMMON_CHEMISTRY_API_KEY`` environment
-variable (loaded from ``.env`` when present).
+documented by CAS Common Chemistry. Authentication needs two headers:
 
-Probing notes (2026-08-08, live against commonchemistry.cas.org):
-- Header name is case-insensitive; ``X-Api-Key`` works (server error message
+- ``X-Api-Key``: the API token from ``CAS_COMMON_CHEMISTRY_API_KEY``
+  (loaded from ``.env`` when present).
+- ``x-origin``: a header parameter that all three endpoints declare in the
+  official swagger, marked ``x-hidden: true`` so it never shows in the
+  Swagger UI docs. Its documented default is
+  ``https://commonchemistry.cas.org/api-overview``.
+
+Probing notes (2026-10-12, against the official swagger published at
+``https://commonchemistry.cas.org/swagger/commonchemistry-swagger.json``):
+
+- The live gateway is ``https://commonchemistry.cas.org/direct-api`` (that
+  swagger's ``host`` + ``basePath``). ``https://commonchemistry.cas.org/api``
+  is a retired gateway that rejects every token with HTTP 403.
+- The gateway authenticates in two stages, and the two failures differ: a
+  missing or unknown ``X-Api-Key`` returns HTTP 403 ``{"message":"Forbidden"}``,
+  while a *valid* key without a usable ``x-origin`` returns HTTP 401
+  ``{"message":"Unauthorized"}``. A 401 is therefore not evidence of a bad
+  token — check the ``x-origin`` header first.
+- ``x-origin`` is validated by domain rather than by exact value: any
+  ``commonchemistry.cas.org`` form is accepted, a foreign origin such as
+  ``https://example.com`` is rejected with 403, and an empty value gives 401.
+
+Endpoint-shape notes carried over from the 2026-08-08 probe (still accurate):
+- Header names are case-insensitive; ``X-Api-Key`` works (server error message
   prints ``X-API-KEY``).
 - ``/search`` returns ``count`` (int) and ``results`` with ``rn`` / ``name`` /
   ``images`` (list of SVG strings). Names and formulas may contain HTML markup
@@ -27,8 +47,17 @@ from dotenv import load_dotenv
 
 from .utils import strip_html
 
-BASE_URL = "https://commonchemistry.cas.org/api"
+CAS_HOST = "https://commonchemistry.cas.org"
+DEFAULT_BASE_URL = f"{CAS_HOST}/direct-api"
+DEFAULT_ORIGIN = f"{CAS_HOST}/api-overview"
+
+# Module-level constant kept for importers. ``_base_url()`` is the source of
+# truth at request time because it also honours the environment override.
+BASE_URL = DEFAULT_BASE_URL
+
 API_KEY_ENV = "CAS_COMMON_CHEMISTRY_API_KEY"
+BASE_URL_ENV = "CAS_COMMON_CHEMISTRY_BASE_URL"
+ORIGIN_ENV = "CAS_COMMON_CHEMISTRY_ORIGIN"
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 2
 MAX_PAGE_SIZE = 100
@@ -42,10 +71,15 @@ class CasApiError(RuntimeError):
         self.status = status
 
 
+def _env_override(name: str) -> str:
+    """Read an optional environment override (loading .env when present)."""
+    load_dotenv()
+    return os.environ.get(name, "").strip()
+
+
 def _api_key() -> str:
     """Return the CAS API key from the environment (loading .env if present)."""
-    load_dotenv()
-    key = os.environ.get(API_KEY_ENV, "").strip()
+    key = _env_override(API_KEY_ENV)
     if not key:
         raise RuntimeError(
             f"环境变量 {API_KEY_ENV} 未配置：请在项目根目录 .env 中设置 CAS Common Chemistry API key"
@@ -53,13 +87,25 @@ def _api_key() -> str:
     return key
 
 
+def _base_url() -> str:
+    """Return the API base URL, honouring ``CAS_COMMON_CHEMISTRY_BASE_URL``."""
+    return (_env_override(BASE_URL_ENV) or DEFAULT_BASE_URL).rstrip("/")
+
+
 def _headers() -> Dict[str, str]:
-    return {"X-Api-Key": _api_key(), "Accept": "application/json"}
+    return {
+        "X-Api-Key": _api_key(),
+        # The live /direct-api gateway requires this header as well. All three
+        # endpoints declare it in the official swagger (hidden from the docs
+        # UI), and omitting it returns HTTP 401 even with a valid API key.
+        "X-Origin": _env_override(ORIGIN_ENV) or DEFAULT_ORIGIN,
+        "Accept": "application/json",
+    }
 
 
 def _get(path: str, params: Optional[Dict[str, Any]] = None, text: bool = False) -> requests.Response:
     """GET an endpoint with retries on transient failures, raising CasApiError on errors."""
-    url = f"{BASE_URL}/{path}"
+    url = f"{_base_url()}/{path}"
     headers = _headers()
     last_exc: Optional[Exception] = None
     for attempt in range(MAX_RETRIES + 1):
@@ -93,8 +139,19 @@ def _error_message(status: int, body: str) -> str:
         detail = body.strip()[:200]
     if status == 400:
         return f"请求参数无效（HTTP 400）：{detail}"
+    if status == 401:
+        return (
+            "CAS API 拒绝了请求（HTTP 401 Unauthorized）：API token 有效时"
+            "通常表示 x-origin 请求头缺失或非 CAS 域名，而非 token 本身无效。"
+            f"请检查 {ORIGIN_ENV}（默认 {DEFAULT_ORIGIN}）与 {BASE_URL_ENV}"
+            f"（默认 {DEFAULT_BASE_URL}），并确认 {API_KEY_ENV} 正确。"
+        )
     if status == 403:
-        return f"API key 无效或未授权（HTTP 403），请检查 .env 中的 {API_KEY_ENV}"
+        return (
+            f"API key 无效或未授权（HTTP 403），请检查 .env 中的 {API_KEY_ENV}；"
+            f"若 key 确认有效，请核对 {BASE_URL_ENV} 是否指向当前网关"
+            f"（默认 {DEFAULT_BASE_URL}）。"
+        )
     if status == 404:
         return f"未找到该物质或资源不存在（HTTP 404）：{detail}"
     if status == 429:

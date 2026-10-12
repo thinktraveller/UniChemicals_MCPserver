@@ -14,7 +14,7 @@
 **为什么要使用它？**
 与其手动在 PubChem 或 CAS 网站上搜索分子式、分子量、结构代码（SMILES/InChI）、同义词、3D 构象或 molfile，不如直接把任务交给 AI。
 
-> **数据来源：** PubChem 数据实时来自 PubChem 官方 REST 服务（PUG REST / PUG-View）；CAS 数据来自 CAS Common Chemistry API（`https://commonchemistry.cas.org/api`）。本服务器不保存任何本地缓存或数据库。
+> **数据来源：** PubChem 数据实时来自 PubChem 官方 REST 服务（PUG REST / PUG-View）；CAS 数据来自 CAS Common Chemistry API（`https://commonchemistry.cas.org/direct-api`）。本服务器不保存任何本地缓存或数据库。
 
 ---
 

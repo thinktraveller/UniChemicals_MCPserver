@@ -14,7 +14,7 @@ This server acts as a bridge between AI assistants (like Claude, Cursor, Trae) a
 **Why use it?**
 Instead of manually browsing PubChem or CAS websites to find molecular formulas, weights, structures (SMILES/InChI), synonyms, 3D conformers or molfiles, you can simply ask your AI assistant.
 
-> **Data sources:** PubChem data is fetched in real time from PubChem's official REST services (PUG REST / PUG-View); CAS data is fetched from the CAS Common Chemistry API (`https://commonchemistry.cas.org/api`). This server keeps no local cache or database.
+> **Data sources:** PubChem data is fetched in real time from PubChem's official REST services (PUG REST / PUG-View); CAS data is fetched from the CAS Common Chemistry API (`https://commonchemistry.cas.org/direct-api`). This server keeps no local cache or database.
 
 ---
 
