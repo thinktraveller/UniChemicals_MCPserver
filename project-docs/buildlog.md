@@ -455,3 +455,54 @@
 ### 下一步计划
 - 用户执行发布：`uv publish dist/unichemicals_mcp_server-1.1.0-py3-none-any.whl dist/unichemicals_mcp_server-1.1.0.tar.gz`，或用 `uv publish` 发布 `dist/` 下全部产物；
 - 发布后 `uvx --refresh unichemicals-mcp-server` 独立环境验收。
+
+## [2026-10-12] 修复：CAS 网关迁移导致全部 `cas_*` 工具返回 HTTP 401
+
+### 现象
+- 使用**有效**的 CAS token 调用任意 `cas_*` 工具，稳定返回 `Error: CAS API 服务端错误（HTTP 401）：Unauthorized`；PubChem 工具（36 个）不受影响。
+- 同一 token 在 CAS 官方 api-overview 页面的 Swagger「Authorize → Try it out」中返回 **200**，即 token 本身有效。
+
+### 根因定位
+对照实验（2026-10-12，`GET https://commonchemistry.cas.org/{base}/search?q=aspirin`，每项重复 3 次结果一致）：
+
+| base URL | 只带 `X-Api-Key` | `X-Api-Key` + `x-origin` | 只带 `x-origin` | 两者都不带 |
+|---|---|---|---|---|
+| `/api`（v1.0.0 起代码内写死的地址） | 401 | **403** | — | 401 |
+| `/direct-api`（官方 swagger 的 `basePath`） | 401 | **200** | 403 | 401 |
+
+结论：
+1. **Base URL 已迁移。** CAS 当前网关是 `https://commonchemistry.cas.org/direct-api`（取自官方 swagger `https://commonchemistry.cas.org/swagger/commonchemistry-swagger.json` 的 `host` + `basePath`）。旧的 `/api` 网关对任何 token 都返回 403。
+2. **网关要求额外的 `x-origin` 请求头。** 该头在 swagger 中声明于全部三个端点，但带 `"x-hidden": true`，因此不出现在 Swagger UI 文档里（其 `default` 为 `https://commonchemistry.cas.org/api-overview`）。缺少它时即便 key 有效也返回 401。
+3. **两段式鉴权，错误码含义不同：** 缺/错 key → 403 `{"message":"Forbidden"}`；key 有效但 `x-origin` 不可用 → 401 `{"message":"Unauthorized"}`。因此 401 不能直接判定为 token 失效。
+4. **`x-origin` 按域名校验，而非精确值：** `https://commonchemistry.cas.org/api-overview`、`https://commonchemistry.cas.org`、`commonchemistry.cas.org` 均可通过；`https://example.com`、`x` 返回 403；空值返回 401。
+
+> 与 v1.0.0 记录的差异：当时实测为「无 key 或错误 key 返回 403 `{"message": "API key required..."}`」，说明 CAS 在 v1.1.0 发布后调整了网关（路径迁移 + 新增隐藏头）。
+
+### 关键变更
+- `src/cas/client.py`：
+  - `BASE_URL` 由 `https://commonchemistry.cas.org/api` 改为 `https://commonchemistry.cas.org/direct-api`；
+  - 新增 `CAS_HOST` / `DEFAULT_BASE_URL` / `DEFAULT_ORIGIN` 常量，新增 `BASE_URL_ENV`、`ORIGIN_ENV` 两个环境变量覆盖项，并新增 `_env_override()`、`_base_url()` 辅助函数（请求时读取，`BASE_URL` 常量保留以兼容导入方）；
+  - `_headers()` 增加 `X-Origin`（默认 `https://commonchemistry.cas.org/api-overview`）；
+  - `_get()` 改用 `_base_url()`；
+  - `_error_message()` 增加 401 分支（提示优先排查 `x-origin` 而非 token），并扩充 403 分支（提示核对网关地址）；
+  - 模块 docstring 更新为当前鉴权模型与探测结论。
+- `README.md` / `README_zh.md`：数据来源的 CAS API 地址同步为 `/direct-api`。
+- `.env.example`：补充两个可选覆盖项的注释说明（默认值正确，无需设置）。
+- 新增 `tests/test_cas_client.py`：6 个**无网络依赖**的 `unittest` 用例，锁定默认 Base URL、`x-origin` 默认值、环境变量覆盖优先级、401/403 提示文案、缺 key 报错。仅使用标准库，不引入新依赖。
+
+### 验证结果
+- `python -m unittest discover -s tests -v` → **6 passed**。
+- MCP 握手 `tools/list` → 47 个工具无回归。
+- 真实调用（token 有效）：
+  - 修复前（PyPI 1.1.0）：`Error: CAS API 服务端错误（HTTP 401）：Unauthorized`
+  - 修复后（本仓库源码）：
+    - `/search`：`cas_search_substance_by_name("aspirin")` → `count=1`，`rn=50-78-2`
+    - `/detail` + `/export`：`cas_get_molfile_by_casrn("50-78-2")` → 完整 V2000 molfile
+
+### 遇到的问题及解决方案
+- 现象容易被误判为「token 无效」。实际是**两个叠加的客户端缺陷**（地址过期 + 漏发隐藏头），token 一直是好的。已在 docstring 与错误信息中写明 401 的真实含义，避免后续重复误判。
+- 官方 api-overview 页面完全未提及 `x-origin`，只能从 swagger JSON 的 `x-hidden` 参数定义中发现；已在 `client.py` docstring 中记录该来源。
+
+### 下一步计划
+- 合并后发布新版本（建议 1.1.1），届时可移除调用方的一切本地临时补丁。
+- 可选：在 CI 中加入 `tests/` 的 `unittest` 运行步骤（当前仓库无 CI 配置）。
